@@ -19,6 +19,7 @@ Update this file whenever the current phase, active feature, or implementation s
   - Created floating `ProjectSidebar` with project/shared tabs and empty states.
   - Aligned shadcn Dialog component to the standard `rounded-3xl` border radius.
   - Integrated and validated components interactively in `app/page.tsx`.
+  - Added accessibility support (`aria-hidden` and `inert`) to `ProjectSidebar` to prevent keyboard/screen-reader navigation when closed.
 
 ## In Progress
 

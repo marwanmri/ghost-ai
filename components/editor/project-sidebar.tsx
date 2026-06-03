@@ -20,6 +20,8 @@ export function ProjectSidebar({ isOpen, onClose, onClickNewProject }: ProjectSi
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}
       aria-label="Projects sidebar"
+      aria-hidden={!isOpen}
+      inert={!isOpen}
     >
       {/* Upper Section */}
       <div className="flex flex-col flex-1 overflow-hidden">
