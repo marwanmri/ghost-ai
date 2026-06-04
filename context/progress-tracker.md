@@ -30,6 +30,7 @@ Update this file whenever the current phase, active feature, or implementation s
   - Configured `proxy.ts` (Next.js 16 middleware) to secure routes by default.
   - Wrapped root layout with `ClerkProvider`, customizing the appearance using dark theme properties mapped directly to our CSS variables.
   - Created customized, responsive two-panel sign-in and sign-up routes.
+  - Extracted duplicated two-panel layout markup into a reusable `AuthShell` component to avoid copy-pasting layouts.
   - Relocated the mock editor workspace/showcase layout to the protected `/editor` page.
   - Set up server-side auth check on the root page `/` to redirect authenticated users to `/editor` and unauthenticated users to `/sign-in`.
   - Embedded Clerk's `<UserButton />` in the `EditorNavbar` component.
