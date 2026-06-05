@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Phase 3: Project Authentication & Routes (Clerk setup)
+- Phase 4: Collaborative Canvas (Liveblocks & React Flow integration)
 
 ## Current Goal
 
-- Wire Clerk into the Next.js app including provider, auth pages (sign-in/up), redirects, route protection (proxy.ts), and user menu button.
+- Integrate Liveblocks and React Flow to establish a collaborative canvas surface with node/edge updates.
 
 ## Completed
 
@@ -34,6 +34,19 @@ Update this file whenever the current phase, active feature, or implementation s
   - Relocated the mock editor workspace/showcase layout to the protected `/editor` page.
   - Set up server-side auth check on the root page `/` to redirect authenticated users to `/editor` and unauthenticated users to `/sign-in`.
   - Embedded Clerk's `<UserButton />` in the `EditorNavbar` component.
+- Project Dialogs & Sidebar Actions (`04-project-dialogs.md`):
+  - Built custom hook `useProjectDialogs` to handle in-memory project array, active projects, live slug previews, form validation, and mock loading delays.
+  - Replaced editor page placeholder showcase widgets with the minimal `/editor` landing screen and active project workspace display.
+  - Implemented Create, Rename, and Delete shadcn Dialog modal overlays utilizing standardized `rounded-3xl` styling.
+  - Upgraded `ProjectSidebar` to render lists of projects under the respective owned/shared tabs with action buttons (rename/delete) visible only on owned items.
+  - Positioned a backdrop scrim overlay for mobile layouts that closes the projects sidebar on external clicks.
+  - Validated full codebase with a clean `npm run build` and `npm run lint`.
+  - Refined the Content Tabs design in `ProjectSidebar` to match the capsule/pill-shaped segmented control reference design:
+    - Updated `TabsList` and `TabsTrigger` to fully rounded `rounded-full` capsule shapes.
+    - Integrated Lucide icons (`FolderKanban` and `Share2`) into the tabs with smooth color transition animations.
+    - Styled the active tab with an elevated background (`bg-subtle`), subtle borders, custom drop-shadow, and highlighted the icon with the brand's cyan accent color (`text-brand`).
+    - Fixed triggers alignment and vertical padding overflow by defining a fixed height (`h-9`) on the `TabsList` container and making the triggers fill it cleanly (`h-full`).
+  - Added `suppressHydrationWarning` to the `<html>` element in root `RootLayout` ([layout.tsx](file:///Users/marvanmiri/Desktop/ghost_ai/app/layout.tsx)) to resolve hydration mismatch warnings caused by browser extensions (e.g. Grammarly adding custom data attributes to the `<body>` element).
 
 ## In Progress
 

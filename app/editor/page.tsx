@@ -3,367 +3,328 @@
 import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Textarea } from "@/components/ui/textarea";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Terminal, 
-  Layers, 
-  Settings, 
-  Play, 
-  CheckCircle,
-  FolderKanban
+import {
+  Plus,
+  FolderOpen,
+  ArrowLeft,
+  Loader2,
+  AlertTriangle,
+  FolderKanban,
 } from "lucide-react";
 import { EditorNavbar } from "@/components/editor/editor-navbar";
 import { ProjectSidebar } from "@/components/editor/project-sidebar";
+import { useProjectDialogs } from "@/hooks/use-project-dialogs";
 
-export default function Home() {
-  const [inputText, setInputText] = useState("");
-  const [textareaText, setTextareaText] = useState("");
-  const [dialogOpen, setDialogOpen] = useState(false);
-  
-  // Editor chrome states
+export default function EditorPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [newProjectDialogOpen, setNewProjectDialogOpen] = useState(false);
-  const [projectName, setProjectName] = useState("");
+
+  const {
+    projects,
+    activeProjectId,
+    setActiveProjectId,
+    activeProject,
+    activeDialog,
+    selectedProject,
+    nameInput,
+    slugInput,
+    isLoading,
+    openCreateDialog,
+    openRenameDialog,
+    openDeleteDialog,
+    closeDialog,
+    handleNameChange,
+    handleCreateProject,
+    handleRenameProject,
+    handleDeleteProject,
+  } = useProjectDialogs();
 
   return (
     <div className="relative min-h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
-      {/* Editor Chrome Top Navbar */}
+      {/* Top Navbar */}
       <EditorNavbar
         isSidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
       />
 
-      {/* Editor Chrome Left Sidebar */}
+      {/* Left Sidebar */}
       <ProjectSidebar
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onClickNewProject={() => setNewProjectDialogOpen(true)}
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelectProject={(id) => {
+          setActiveProjectId(id);
+          setSidebarOpen(false); // Close on selection (especially good for mobile)
+        }}
+        onRenameProject={openRenameDialog}
+        onDeleteProject={openDeleteDialog}
+        onClickNewProject={openCreateDialog}
       />
 
-      {/* Reusable Dialog Pattern Verification */}
-      <Dialog open={newProjectDialogOpen} onOpenChange={setNewProjectDialogOpen}>
-        <DialogContent className="bg-elevated border border-surface-border rounded-3xl max-w-md p-6 backdrop-blur-md">
+      {/* Mobile Backdrop Scrim */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300"
+          onClick={() => setSidebarOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
+      {/* Main Workspace Area */}
+      <main className="flex-1 relative overflow-y-auto flex flex-col items-center justify-center p-6 md:p-10 select-none">
+        {/* Background ambient lighting */}
+        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[140px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent-ai/5 rounded-full blur-[120px] pointer-events-none" />
+
+        <div className="w-full max-w-xl text-center space-y-6 animate-fade-in relative z-10 p-4">
+          {!activeProject ? (
+            /* Minimal Project Home screen */
+            <div className="space-y-6">
+              <div className="inline-flex p-4 rounded-full bg-accent-primary-dim border border-accent-primary/10 text-accent-primary mb-2 shadow-[0_0_30px_rgba(0,200,212,0.1)]">
+                <FolderOpen className="h-10 w-10" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-copy-primary">
+                  Create a project or open an existing one
+                </h1>
+                <p className="text-sm md:text-base text-copy-muted max-w-md mx-auto">
+                  Start a new architecture workspace, or choose a project from
+                  sidebar.
+                </p>
+              </div>
+              <div>
+                <Button
+                  onClick={openCreateDialog}
+                  className="bg-brand text-base hover:bg-brand/90 font-medium px-5 py-2.5 h-11 rounded-xl shadow-lg shadow-brand/10 transition-all gap-2"
+                >
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                  New Project
+                </Button>
+              </div>
+            </div>
+          ) : (
+            /* Active Project Workspace Placeholder */
+            <div className="space-y-6">
+              <div className="inline-flex p-4 rounded-full bg-accent-ai/10 border border-accent-ai/20 text-accent-ai-text mb-2 shadow-[0_0_30px_rgba(100,87,249,0.1)]">
+                <FolderKanban className="h-10 w-10" />
+              </div>
+              <div className="space-y-2">
+                <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-copy-primary truncate max-w-lg mx-auto">
+                  {activeProject.name}
+                </h1>
+                <p className="text-xs font-mono text-accent-primary-dim text-accent-primary/80 bg-accent-primary-dim/20 px-3 py-1 rounded-full w-fit mx-auto border border-accent-primary/10">
+                  slug: {activeProject.slug}
+                </p>
+                <p className="text-sm text-copy-muted max-w-md mx-auto pt-2">
+                  Collaborative Canvas & spec generation will be implemented in
+                  the next phases.
+                </p>
+              </div>
+              <div className="pt-4 flex justify-center gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setActiveProjectId(null)}
+                  className="border-default hover:bg-subtle text-copy-muted hover:text-copy-primary transition-colors gap-2"
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                  Back to Dashboard
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* CREATE PROJECT DIALOG */}
+      <Dialog open={activeDialog === "create"} onOpenChange={closeDialog}>
+        <DialogContent className="bg-elevated border border-default rounded-3xl max-w-md p-6 backdrop-blur-md">
           <DialogHeader className="space-y-2">
             <DialogTitle className="text-xl text-copy-primary tracking-wide">
               Create New Project
             </DialogTitle>
             <DialogDescription className="text-copy-muted">
-              Initialize a new system architecture design space. Choose a name to get started.
+              Initialize a new system architecture design space. Choose a name
+              to get started.
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="py-4 space-y-3">
-            <label className="text-xs text-copy-muted uppercase tracking-wider font-mono">
-              Project Name
-            </label>
-            <Input
-              placeholder="e.g. E-Commerce Microservices"
-              value={projectName}
-              onChange={(e) => setProjectName(e.target.value)}
-              className="bg-base border-surface-border text-copy-primary placeholder-copy-muted focus:border-brand/40 focus:ring-1 focus:ring-brand/40"
-            />
+
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="create-project-name"
+                className="text-xs text-copy-muted uppercase tracking-wider font-mono"
+              >
+                Project Name
+              </label>
+              <Input
+                id="create-project-name"
+                placeholder="e.g. E-Commerce Microservices"
+                value={nameInput}
+                onChange={(e) => handleNameChange(e.target.value)}
+                className="bg-base border-default text-copy-primary placeholder-copy-muted focus:border-brand/40 focus:ring-1 focus:ring-brand/40 h-10 px-3 rounded-xl"
+                disabled={isLoading}
+                autoFocus
+              />
+            </div>
+
+            {nameInput.trim() && (
+              <div className="p-3 bg-base/60 rounded-xl border border-default/50 space-y-1 animate-fade-in">
+                <div className="text-[10px] text-copy-muted font-mono uppercase tracking-wider">
+                  Live Slug Preview
+                </div>
+                <div className="text-xs font-mono text-accent-primary truncate">
+                  /editor/{slugInput}
+                </div>
+              </div>
+            )}
           </div>
 
-          <DialogFooter className="flex gap-2 justify-end">
-            <Button 
-              variant="ghost" 
-              onClick={() => setNewProjectDialogOpen(false)} 
-              className="hover:bg-subtle text-copy-muted hover:text-copy-primary"
+          <DialogFooter className="flex gap-2 justify-end pt-2 border-t border-default/50">
+            <Button
+              variant="ghost"
+              onClick={closeDialog}
+              className="hover:bg-subtle text-copy-muted hover:text-copy-primary rounded-xl"
+              disabled={isLoading}
             >
               Cancel
             </Button>
-            <Button 
-              onClick={() => {
-                alert(`Mock Project "${projectName || "Untitled Project"}" created!`);
-                setProjectName("");
-                setNewProjectDialogOpen(false);
-              }} 
-              className="bg-brand text-base hover:bg-brand/90 font-medium"
+            <Button
+              onClick={handleCreateProject}
+              className="bg-brand text-base hover:bg-brand/90 font-medium rounded-xl gap-2 px-4 h-10"
+              disabled={isLoading || !nameInput.trim()}
             >
-              Create Project
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                "Create Project"
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Workspace Area */}
-      <main className="flex-1 relative overflow-y-auto p-6 md:p-10 select-none">
-        {/* Background ambient light */}
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-brand/5 rounded-full blur-[140px] pointer-events-none" />
-        <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-accent-ai/5 rounded-full blur-[120px] pointer-events-none" />
-
-        <div className="max-w-4xl mx-auto space-y-10 animate-fade-in relative z-10">
-          {/* Dashboard Header */}
-          <header className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-surface-border pb-6">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight text-copy-primary">
-                Workspace Dashboard
-              </h1>
-              <p className="text-sm text-copy-muted font-mono">
-                Editor Chrome & Design System Showcase
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-accent-dim text-brand border border-brand/20">
-                <CheckCircle className="h-3 w-3" /> Chrome Active
+      {/* RENAME PROJECT DIALOG */}
+      <Dialog open={activeDialog === "rename"} onOpenChange={closeDialog}>
+        <DialogContent className="bg-elevated border border-default rounded-3xl max-w-md p-6 backdrop-blur-md">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl text-copy-primary tracking-wide">
+              Rename Project
+            </DialogTitle>
+            <DialogDescription className="text-copy-muted">
+              Current name:{" "}
+              <span className="text-copy-primary font-medium">
+                {selectedProject?.name}
               </span>
-            </div>
-          </header>
+            </DialogDescription>
+          </DialogHeader>
 
-          {/* Interactive Toggle Showcase Callout */}
-          <div className="p-4 rounded-2xl bg-surface border border-surface-border flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-copy-primary flex items-center gap-2">
-                <FolderKanban className="h-4 w-4 text-brand animate-pulse" /> Try the Projects Sidebar
-              </h3>
-              <p className="text-xs text-copy-muted">
-                Click the top-left icon in the navbar to open/close the projects list overlay.
-              </p>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <label
+                htmlFor="rename-project-name"
+                className="text-xs text-copy-muted uppercase tracking-wider font-mono"
+              >
+                New Project Name
+              </label>
+              <Input
+                id="rename-project-name"
+                placeholder="e.g. E-Commerce Platform"
+                value={nameInput}
+                onChange={(e) => handleNameChange(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && nameInput.trim() && !isLoading) {
+                    handleRenameProject();
+                  }
+                }}
+                className="bg-base border-default text-copy-primary placeholder-copy-muted focus:border-brand/40 focus:ring-1 focus:ring-brand/40 h-10 px-3 rounded-xl"
+                disabled={isLoading}
+                autoFocus
+              />
             </div>
-            <Button
-              variant="outline"
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="border-surface-border hover:bg-subtle text-copy-primary self-start md:self-auto text-xs"
-            >
-              {sidebarOpen ? "Hide Sidebar" : "Show Sidebar"}
-            </Button>
           </div>
 
-          {/* Core Showcase via Tabs */}
-          <Tabs defaultValue="components" className="w-full space-y-6">
-            <TabsList className="bg-surface border border-surface-border p-1 rounded-xl w-full md:w-auto flex">
-              <TabsTrigger value="components" className="flex-1 md:flex-initial gap-2 px-4 py-2 text-sm font-medium">
-                <Layers className="h-4 w-4" /> Primitives
-              </TabsTrigger>
-              <TabsTrigger value="canvas" className="flex-1 md:flex-initial gap-2 px-4 py-2 text-sm font-medium">
-                <Terminal className="h-4 w-4" /> Console & Logs
-              </TabsTrigger>
-              <TabsTrigger value="settings" className="flex-1 md:flex-initial gap-2 px-4 py-2 text-sm font-medium">
-                <Settings className="h-4 w-4" /> System Info
-              </TabsTrigger>
-            </TabsList>
+          <DialogFooter className="flex gap-2 justify-end pt-2 border-t border-default/50">
+            <Button
+              variant="ghost"
+              onClick={closeDialog}
+              className="hover:bg-subtle text-copy-muted hover:text-copy-primary rounded-xl"
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleRenameProject}
+              className="bg-brand text-base hover:bg-brand/90 font-medium rounded-xl gap-2 px-4 h-10"
+              disabled={isLoading || !nameInput.trim()}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                "Save Changes"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
-            {/* Primitives Tab */}
-            <TabsContent value="components" className="space-y-8 outline-none">
-              {/* Grid layout for buttons & inputs */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                {/* Card 1: Buttons showcase */}
-                <Card className="bg-surface border-surface-border rounded-2xl shadow-xl">
-                  <CardHeader>
-                    <CardTitle className="text-xl text-copy-primary">Buttons</CardTitle>
-                    <CardDescription className="text-copy-muted">
-                      Composition of standard shadcn button variants mapped to design tokens.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="flex flex-wrap gap-3">
-                    <Button variant="default" className="gap-2">
-                      <Play className="h-4 w-4" /> Default Primary
-                    </Button>
-                    <Button variant="secondary">Secondary</Button>
-                    <Button variant="outline" className="border-surface-border hover:bg-subtle text-copy-primary">
-                      Outline Subdued
-                    </Button>
-                    <Button variant="destructive" className="bg-state-error text-white hover:bg-state-error/80">
-                      Destructive Action
-                    </Button>
-                    <Button variant="ghost" className="hover:bg-subtle text-copy-muted hover:text-copy-primary">
-                      Ghost Link
-                    </Button>
-                  </CardContent>
-                  <CardFooter className="border-t border-surface-border pt-4 text-xs text-copy-muted font-mono">
-                    Theme mappings: bg-brand, state-error, bg-subtle
-                  </CardFooter>
-                </Card>
+      {/* DELETE PROJECT DIALOG */}
+      <Dialog open={activeDialog === "delete"} onOpenChange={closeDialog}>
+        <DialogContent className="bg-elevated border border-default rounded-3xl max-w-md p-6 backdrop-blur-md">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="text-xl text-copy-primary tracking-wide flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-state-error animate-pulse" />
+              Delete Project
+            </DialogTitle>
+            <DialogDescription className="text-copy-muted leading-relaxed">
+              Are you sure you want to delete{" "}
+              <span className="text-copy-primary font-medium">
+                &quot;{selectedProject?.name}&quot;
+              </span>
+              ? This action is permanent and cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
 
-                {/* Card 2: Interactive Dialog & Inputs */}
-                <Card className="bg-surface border-surface-border rounded-2xl shadow-xl">
-                  <CardHeader>
-                    <CardTitle className="text-xl text-copy-primary">Inputs & Modals</CardTitle>
-                    <CardDescription className="text-copy-muted">
-                      Test text inputs, reactive bindings, and custom styled dialog overlays.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <label className="text-xs text-copy-muted uppercase tracking-wider font-mono">
-                        Visual Text Input
-                      </label>
-                      <Input
-                        placeholder="Type something..."
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        className="bg-base border-surface-border text-copy-primary placeholder-copy-muted focus:border-brand/40 focus:ring-1 focus:ring-brand/40"
-                      />
-                    </div>
-
-                    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                      <DialogTrigger render={
-                        <Button variant="outline" className="w-full border-surface-border hover:bg-subtle text-copy-primary">
-                          Open Dialog Pattern
-                        </Button>
-                      } />
-                      <DialogContent className="bg-elevated border border-surface-border rounded-3xl max-w-md p-6 backdrop-blur-md">
-                        <DialogHeader className="space-y-2">
-                          <DialogTitle className="text-xl text-copy-primary tracking-wide">
-                            Workspace Confirmation
-                          </DialogTitle>
-                          <DialogDescription className="text-copy-muted">
-                            This is a demo dialog verifying overlay styling, dark elevated background, and the 3xl border-radius system boundaries.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="py-4 font-mono text-sm text-brand bg-base p-4 rounded-xl border border-surface-border/50">
-                          Input state: &quot;{inputText || "Empty input"}&quot;
-                        </div>
-                        <DialogFooter className="flex gap-2 justify-end">
-                          <Button variant="ghost" onClick={() => setDialogOpen(false)} className="hover:bg-subtle text-copy-muted">
-                            Cancel
-                          </Button>
-                          <Button onClick={() => setDialogOpen(false)} className="bg-brand text-base hover:bg-brand/90 font-medium">
-                            Accept Spec
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </CardContent>
-                  <CardFooter className="border-t border-surface-border pt-4 text-xs text-copy-muted font-mono">
-                    Dialog mapping: bg-elevated, rounded-3xl
-                  </CardFooter>
-                </Card>
-              </div>
-
-              {/* Full-width block: Textarea */}
-              <Card className="bg-surface border-surface-border rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-xl text-copy-primary">System Description (Textarea)</CardTitle>
-                  <CardDescription className="text-copy-muted">
-                    Used for specifying prompt templates. Verifies focus rings and text flow.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <Textarea
-                    placeholder="Describe your microservices architecture..."
-                    value={textareaText}
-                    onChange={(e) => setTextareaText(e.target.value)}
-                    rows={4}
-                    className="bg-base border-surface-border text-copy-primary placeholder-copy-muted focus:border-brand/40 focus:ring-1 focus:ring-brand/40"
-                  />
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Console & Logs */}
-            <TabsContent value="canvas" className="space-y-6 outline-none">
-              <Card className="bg-surface border-surface-border rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-xl text-copy-primary flex items-center gap-2">
-                    <Terminal className="h-5 w-5 text-brand" /> Scroll Area Console Logs
-                  </CardTitle>
-                  <CardDescription className="text-copy-muted">
-                    Scrolling through continuous task status output with customized system scrollbars.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ScrollArea className="h-72 w-full rounded-xl border border-surface-border bg-base p-4 font-mono text-xs text-copy-muted">
-                    <div className="space-y-2">
-                      <p className="text-brand">[SYSTEM] Initializing design workspace container...</p>
-                      <p className="text-state-success">[SUCCESS] Tailwind configurations injected successfully</p>
-                      <p className="text-copy-primary">[INFO] Loaded project &apos;Ghost Canvas 01&apos;</p>
-                      <p className="text-copy-muted">[VERBOSE] Connected to Liveblocks room &apos;project-room-1&apos;</p>
-                      <p className="text-accent-ai-text">[AI] Initializing architecture generation worker...</p>
-                      <p className="text-copy-muted">[VERBOSE] Querying remote schema versions</p>
-                      <p className="text-state-warning">[WARNING] Clerk authentication token expiring in 15m</p>
-                      <p className="text-copy-muted">[VERBOSE] Performing background garbage collection</p>
-                      <p className="text-copy-muted">[VERBOSE] Rendered 12 system nodes and 8 connectors</p>
-                      <p className="text-copy-muted">[VERBOSE] Serializing snapshot to database blob storage...</p>
-                      <p className="text-state-success">[SUCCESS] Stored snapshot canvas_123.json in Vercel Blob</p>
-                      <p className="text-brand">[SYSTEM] Server status verification complete</p>
-                      <p className="text-copy-muted">[VERBOSE] Awaiting prompt requests from clients</p>
-                      <p className="text-copy-muted">[VERBOSE] Keepalive heartbeat ping sent (RTT: 4ms)</p>
-                    </div>
-                  </ScrollArea>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Settings Tab */}
-            <TabsContent value="settings" className="space-y-6 outline-none">
-              <Card className="bg-surface border-surface-border rounded-2xl shadow-xl">
-                <CardHeader>
-                  <CardTitle className="text-xl text-copy-primary">System Information</CardTitle>
-                  <CardDescription className="text-copy-muted">
-                    Checking active CSS variable references and build constraints.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 font-mono text-xs">
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                    <div className="p-3 bg-base border border-surface-border rounded-xl">
-                      <p className="text-copy-muted mb-1">Base BG</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full bg-base border border-surface-border" />
-                        <span className="text-copy-primary">#080809</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-base border border-surface-border rounded-xl">
-                      <p className="text-copy-muted mb-1">Surface BG</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full bg-surface border border-surface-border" />
-                        <span className="text-copy-primary">#111114</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-base border border-surface-border rounded-xl">
-                      <p className="text-copy-muted mb-1">Brand Accent</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full bg-brand" />
-                        <span className="text-copy-primary">#00c8d4</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-base border border-surface-border rounded-xl">
-                      <p className="text-copy-muted mb-1">AI Purple</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full bg-accent-ai" />
-                        <span className="text-copy-primary">#6457f9</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-base border border-surface-border rounded-xl">
-                      <p className="text-copy-muted mb-1">State Error</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full bg-state-error" />
-                        <span className="text-copy-primary">#ff4d4f</span>
-                      </div>
-                    </div>
-                    <div className="p-3 bg-base border border-surface-border rounded-xl">
-                      <p className="text-copy-muted mb-1">State Success</p>
-                      <div className="flex items-center gap-2">
-                        <span className="h-4 w-4 rounded-full bg-state-success" />
-                        <span className="text-copy-primary">#34d399</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        </div>
-      </main>
+          <DialogFooter className="flex gap-2 justify-end pt-4 border-t border-default/50">
+            <Button
+              variant="ghost"
+              onClick={closeDialog}
+              className="hover:bg-subtle text-copy-muted hover:text-copy-primary rounded-xl"
+              disabled={isLoading}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleDeleteProject}
+              variant="destructive"
+              className="bg-state-error text-white hover:bg-state-error/90 font-medium rounded-xl gap-2 px-4 h-10"
+              disabled={isLoading}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Project"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
