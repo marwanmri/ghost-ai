@@ -15,7 +15,7 @@ export async function getProjects(): Promise<Project[]> {
   }
 
   const user = await currentUser();
-  const emails = user?.emailAddresses.map((e) => e.emailAddress) || [];
+  const emails = user?.emailAddresses.map((e) => e.emailAddress.trim().toLowerCase()) || [];
 
   const projects = await prisma.project.findMany({
     where: {
@@ -24,7 +24,7 @@ export async function getProjects(): Promise<Project[]> {
         {
           collaborators: {
             some: {
-              email: {
+              emailNormalized: {
                 in: emails,
               },
             },

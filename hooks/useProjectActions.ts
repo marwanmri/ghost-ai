@@ -7,15 +7,6 @@ import { slugify } from "@/lib/utils";
 
 export type DialogType = "create" | "rename" | "delete" | null;
 
-function generateSuffix(length: number = 4): string {
-  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
-  let result = "";
-  for (let i = 0; i < length; i++) {
-    result += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return result;
-}
-
 export function useProjectActions(activeProjectId: string | null) {
   const router = useRouter();
   const [activeDialog, setActiveDialog] = useState<DialogType>(null);
@@ -67,17 +58,12 @@ export function useProjectActions(activeProjectId: string | null) {
     setIsLoading(true);
     setError(null);
     try {
-      const suffix = generateSuffix(4);
-      const baseSlug = slugify(nameInput);
-      const roomId = baseSlug ? `${baseSlug}-${suffix}` : suffix;
-
       const response = await fetch("/api/projects", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: roomId,
           name: nameInput.trim(),
         }),
       });
@@ -95,10 +81,14 @@ export function useProjectActions(activeProjectId: string | null) {
 
       const newProject = await response.json();
       closeDialog();
-      router.push(`/editor/${newProject.id}`);
-    } catch (err: any) {
+      router.push(`/editor/${encodeURIComponent(newProject.id)}`);
+    } catch (err: unknown) {
       console.error("Error creating project:", err);
-      setError(err?.message || "An unexpected error occurred");
+      setError(
+        err instanceof Error
+          ? err.message
+          : String(err) || "An unexpected error occurred",
+      );
       setIsLoading(false);
     }
   };
@@ -108,7 +98,7 @@ export function useProjectActions(activeProjectId: string | null) {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/projects/${selectedProject.id}`, {
+      const response = await fetch(`/api/projects/${encodeURIComponent(selectedProject.id)}`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
@@ -127,7 +117,7 @@ export function useProjectActions(activeProjectId: string | null) {
       closeDialog();
 
       if (wasActive) {
-        router.push(`/editor/${updatedProject.id}`);
+        router.push(`/editor/${encodeURIComponent(updatedProject.id)}`);
       } else {
         router.refresh();
       }
@@ -142,7 +132,7 @@ export function useProjectActions(activeProjectId: string | null) {
 
     setIsLoading(true);
     try {
-      const response = await fetch(`/api/projects/${selectedProject.id}`, {
+      const response = await fetch(`/api/projects/${encodeURIComponent(selectedProject.id)}`, {
         method: "DELETE",
       });
 

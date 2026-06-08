@@ -11,7 +11,7 @@ export async function GET() {
 
     // Retrieve the user from Clerk to get their email addresses
     const user = await currentUser();
-    const emails = user?.emailAddresses.map((e) => e.emailAddress) || [];
+    const emails = user?.emailAddresses.map((e) => e.emailAddress.trim().toLowerCase()) || [];
 
     // Find projects owned by the user OR projects where the user is a collaborator
     const projects = await prisma.project.findMany({
@@ -21,7 +21,7 @@ export async function GET() {
           {
             collaborators: {
               some: {
-                email: {
+                emailNormalized: {
                   in: emails,
                 },
               },
@@ -54,16 +54,12 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    let id: string | undefined = undefined;
     let name = "Untitled Project";
     let description: string | undefined = undefined;
 
     // Safely parse request body
     try {
       const body = await request.json();
-      if (body.id && typeof body.id === "string" && body.id.trim()) {
-        id = body.id.trim();
-      }
       if (body.name && typeof body.name === "string" && body.name.trim()) {
         name = body.name.trim();
       }
@@ -71,12 +67,14 @@ export async function POST(request: Request) {
         description = body.description.trim();
       }
     } catch {
-      // Body might be empty or not JSON, default to Untitled Project
+      return NextResponse.json(
+        { error: "Invalid JSON payload" },
+        { status: 400 },
+      );
     }
 
     const project = await prisma.project.create({
       data: {
-        id,
         ownerId: userId,
         name,
         description,

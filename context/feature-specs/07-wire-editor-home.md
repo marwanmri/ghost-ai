@@ -4,7 +4,7 @@ Wire the editor home sidebar and dialogs to the real project API.
 
 The editor home page is a server component.
 
-Fetch owned and shared projects server-side using the existing project data helper and pass both lists to the sidebar.
+Fetch projects server-side using the existing project data helper, pass a single Project[] array (with the isOwned flag) to the sidebar, and derive owned vs shared views there.
 
 No client-side fetching for initial load.
 

@@ -69,6 +69,14 @@ Update this file whenever the current phase, active feature, or implementation s
     - Fixed project renaming to update the project ID/slug dynamically (preserving the unique suffix) and cascade the update in the database.
     - Configured client-side redirection to push browser navigation to the new workspace URL (`/editor/[newProjectId]`) upon renaming the active project.
     - Verified complete build and TypeScript checking is fully passing.
+  - Code improvements and bug fixes:
+    - Fixed error handling on project rename (`PATCH /api/projects/[projectId]`) to catch unique ID conflicts and return a 409 Conflict response.
+    - Updated project creation (`POST /api/projects`) to stop accepting client-side controlled primary key IDs and return 400 Bad Request on JSON parse failures.
+    - Updated `useProjectActions.ts` client hook to not pass custom client-side project IDs, encode dynamic route parameters in pushes/replaces, and strongly type catch errors.
+    - Updated Accelerate protocol checks in `lib/prisma.ts` to consistently match `prisma+postgres://`.
+    - Added `emailNormalized` field, unique constraint, and index on `ProjectCollaborator` model to enable case-insensitive identity lookups, and successfully generated/applied DB migrations.
+    - Corrected the `07-wire-editor-home.md` spec document to match the single Project[] sidebar data contract.
+    - Fixed Next.js build optimization hanging by restoring `allowExitOnIdle: true` and `idleTimeoutMillis: 1000` to the pg pool connection options in `lib/prisma.ts`.
 
 ## In Progress
 
@@ -95,4 +103,4 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Session Notes
 
-- Completed the backend project API routes implementation with owner verification and unauthenticated block checks. Verified full build and lint compliance. Ready to begin Phase 4 (Collaborative Canvas integrating Liveblocks and React Flow).
+- Resolved code audit findings. Applied fixes for API route handlers, project creation payloads, type checks, spec documents, and schema indexing. Successfully diagnosed and fixed the `npm run build` hanging issue by restoring idle timeout options to the PostgreSQL connection pool. Verified that the entire project compiles successfully and type-checks in less than 30 seconds.

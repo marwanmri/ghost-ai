@@ -83,6 +83,20 @@ export async function PATCH(
     return NextResponse.json(updatedProject);
   } catch (error) {
     console.error("Error updating project:", error);
+    const err = error as any;
+    if (
+      err &&
+      (err.code === "P2002" ||
+        (err.meta &&
+          typeof err.meta === "object" &&
+          (err.meta.target === "id" ||
+            (Array.isArray(err.meta.target) && err.meta.target.includes("id")))))
+    ) {
+      return NextResponse.json(
+        { error: "Project ID already exists" },
+        { status: 409 },
+      );
+    }
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 },
