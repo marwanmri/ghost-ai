@@ -3,20 +3,33 @@ import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 import { withAccelerate } from "@prisma/extension-accelerate";
 
-const databaseUrl = process.env.DATABASE_URL || "";
+const databaseUrl = process.env.DATABASE_URL;
+
+if (!databaseUrl) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
 
 function createPrismaClient() {
+  const url = process.env.DATABASE_URL;
+  if (!url) {
+    throw new Error("DATABASE_URL environment variable is not set");
+  }
+
   if (
-    databaseUrl.startsWith("prisma+postgres://") ||
-    databaseUrl.startsWith("prisma+postgress://")
+    url.startsWith("prisma+postgres://") ||
+    url.startsWith("prisma+postgress://")
   ) {
     return new PrismaClient({
-      accelerateUrl: databaseUrl,
+      accelerateUrl: url,
     }).$extends(withAccelerate());
   } else {
-    const pool = new Pool({ connectionString: databaseUrl });
+    const pool = new Pool({
+      connectionString: url,
+      allowExitOnIdle: true,
+      idleTimeoutMillis: 1000,
+    });
     const adapter = new PrismaPg(pool);
-    return new PrismaClient({ adapter });
+    return new PrismaClient({ adapter }).$extends(withAccelerate());
   }
 }
 

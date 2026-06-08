@@ -6,9 +6,9 @@ Create `prisma/models/project.prisma`.
 
 Add `Project`:
 
-- owner ID mapped to Clerck user
+- owner ID mapped to Clerk user
 - name
-- optimal description
+- optional description
 - status enum: `DRAFT`, `ARCHIVED`
 - `canvasJsonPath` for future canvas blob storage
 - timestamps
@@ -30,10 +30,10 @@ Create `lib/prisma.ts` as a cached singleton.
 
 Branch by `DATABASE_URL`:
 
-- if it starts with `prisma+postgress://`, use Accelerate
+- if it starts with `prisma+postgres://`, use Accelerate
 - otherwise use direct `@prisma/adapter-pg`
 
-Catch the client on `global` in development for hot reloads.
+Cache the client on `global` in development for hot reloads.
 
 ## Migration
 
@@ -45,7 +45,7 @@ Already installed:
 
 - `prisma`
 - `@prisma/client`
-- `@prisma/adapter_pg`
+- `@prisma/adapter-pg`
 - `pg`
 
 ## Check when done

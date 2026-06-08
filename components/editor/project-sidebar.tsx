@@ -5,7 +5,7 @@ import { X, Plus, FolderKanban, Share2, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
-import { Project } from "@/hooks/use-project-dialogs";
+import { Project } from "@/lib/projects";
 
 interface ProjectSidebarProps {
   isOpen: boolean;

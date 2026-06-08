@@ -53,6 +53,22 @@ Update this file whenever the current phase, active feature, or implementation s
     - Aligned `prisma` devDependency to `7.8.0` to match `@prisma/client`.
     - Fixed schema compatibility for Prisma v7 by removing deprecated `url` parameters from `prisma/schema.prisma` and legacy `engine: "classic"` from `prisma.config.ts`.
     - Generated the typed Prisma Client under `app/generated/prisma/` and executed database migration.
+  - Backend Project API Routes (`06-project-apis.md`):
+    - Created `GET /api/projects` endpoint to list the current user's projects (retrieved using the Clerk user ID for owned projects, and Clerk email address matching for collaborative projects).
+    - Created `POST /api/projects` endpoint to create a project, defaulting missing/empty names to `"Untitled Project"` and using UUIDs for primary keys.
+    - Created `PATCH /api/projects/[projectId]` endpoint to rename a project with strict owner verification checks.
+    - Created `DELETE /api/projects/[projectId]` endpoint to delete a project (and cascadingly delete collaborators) with strict owner verification checks.
+    - Configured centralized middleware handling in `proxy.ts` to return programmatic JSON `401 Unauthorized` status for unauthenticated API requests instead of page redirects.
+  - Wire Editor Home & Dialogs to API (`07-wire-editor-home.md`):
+    - Extracted server-side helper `lib/projects.ts` to fetch user's projects.
+    - Updated `POST /api/projects` endpoint to accept optional `id` parameter.
+    - Created `hooks/useProjectActions.ts` hook for dialog states, short suffix generation, room ID slugification, and API mutation requests (POST, PATCH, DELETE).
+    - Extracted common editor layout into `components/editor/editor-shell.tsx` client component.
+    - Converted `/editor` index route (`app/editor/page.tsx`) to a Server Component.
+    - Added dynamic workspace page at `/editor/[projectId]` (`app/editor/[projectId]/page.tsx`).
+    - Fixed project renaming to update the project ID/slug dynamically (preserving the unique suffix) and cascade the update in the database.
+    - Configured client-side redirection to push browser navigation to the new workspace URL (`/editor/[newProjectId]`) upon renaming the active project.
+    - Verified complete build and TypeScript checking is fully passing.
 
 ## In Progress
 
@@ -74,7 +90,9 @@ Update this file whenever the current phase, active feature, or implementation s
 - **CSS Variable Theme Mapping**: Leveraged CSS custom properties (`var(...)`) inside the `ClerkProvider` variables option to dynamically theme Clerk's widgets without hardcoding colors.
 - **Dynamic Database Adapter Singleton**: Designed the cached Prisma Client to dynamically choose between serverless/edge Accelerate caching or direct connection pooling with `@prisma/adapter-pg` depending on the `DATABASE_URL` protocol.
 - **Prisma v7 Multi-file Directory Schema**: Configured directory schema loader resolving schema files under `prisma/models` dynamically, removing deprecated datasource params from the schema.
+- **Unified Prisma Client Return Type**: Applied the `.$extends(withAccelerate())` extension across all database client instantiation branches in `lib/prisma.ts`. This unifies the client's return type to a single extended Prisma Client signature, resolving a TypeScript compiler "expression is not callable" error on union type methods (e.g. `findUnique`).
+- **Middleware API Route Protection**: Configured `proxy.ts` middleware to intercept unauthenticated requests targeting `/api/...` paths and return structured `401 Unauthorized` JSON responses directly, preventing invalid page-redirect HTML returns on fetch calls.
 
 ## Session Notes
 
-- Completed the Prisma database integration and model setups. Verified lint and Next.js production builds. Ready to begin Phase 4 (Collaborative Canvas integrating Liveblocks and React Flow).
+- Completed the backend project API routes implementation with owner verification and unauthenticated block checks. Verified full build and lint compliance. Ready to begin Phase 4 (Collaborative Canvas integrating Liveblocks and React Flow).
