@@ -47,6 +47,36 @@ Update this file whenever the current phase, active feature, or implementation s
     - Styled the active tab with an elevated background (`bg-subtle`), subtle borders, custom drop-shadow, and highlighted the icon with the brand's cyan accent color (`text-brand`).
     - Fixed triggers alignment and vertical padding overflow by defining a fixed height (`h-9`) on the `TabsList` container and making the triggers fill it cleanly (`h-full`).
   - Added `suppressHydrationWarning` to the `<html>` element in root `RootLayout` ([layout.tsx](file:///Users/marvanmiri/Desktop/ghost_ai/app/layout.tsx)) to resolve hydration mismatch warnings caused by browser extensions (e.g. Grammarly adding custom data attributes to the `<body>` element).
+  - Prisma Database Integration & Models Setup (`05-prisma.md`):
+    - Defined `Project` and `ProjectCollaborator` relational schema with cascade deletes, custom indexes, and status enums in `prisma/models/project.prisma`.
+    - Created `lib/prisma.ts` as a cached singleton, configuring dynamic resolution of the datasource between Accelerate (`prisma+postgres://` / `prisma+postgress://`) and direct SQL adapter connection using `@prisma/adapter-pg` and `pg.Pool`.
+    - Aligned `prisma` devDependency to `7.8.0` to match `@prisma/client`.
+    - Fixed schema compatibility for Prisma v7 by removing deprecated `url` parameters from `prisma/schema.prisma` and legacy `engine: "classic"` from `prisma.config.ts`.
+    - Generated the typed Prisma Client under `app/generated/prisma/` and executed database migration.
+  - Backend Project API Routes (`06-project-apis.md`):
+    - Created `GET /api/projects` endpoint to list the current user's projects (retrieved using the Clerk user ID for owned projects, and Clerk email address matching for collaborative projects).
+    - Created `POST /api/projects` endpoint to create a project, defaulting missing/empty names to `"Untitled Project"` and using UUIDs for primary keys.
+    - Created `PATCH /api/projects/[projectId]` endpoint to rename a project with strict owner verification checks.
+    - Created `DELETE /api/projects/[projectId]` endpoint to delete a project (and cascadingly delete collaborators) with strict owner verification checks.
+    - Configured centralized middleware handling in `proxy.ts` to return programmatic JSON `401 Unauthorized` status for unauthenticated API requests instead of page redirects.
+  - Wire Editor Home & Dialogs to API (`07-wire-editor-home.md`):
+    - Extracted server-side helper `lib/projects.ts` to fetch user's projects.
+    - Updated `POST /api/projects` endpoint to accept optional `id` parameter.
+    - Created `hooks/useProjectActions.ts` hook for dialog states, short suffix generation, room ID slugification, and API mutation requests (POST, PATCH, DELETE).
+    - Extracted common editor layout into `components/editor/editor-shell.tsx` client component.
+    - Converted `/editor` index route (`app/editor/page.tsx`) to a Server Component.
+    - Added dynamic workspace page at `/editor/[projectId]` (`app/editor/[projectId]/page.tsx`).
+    - Fixed project renaming to update the project ID/slug dynamically (preserving the unique suffix) and cascade the update in the database.
+    - Configured client-side redirection to push browser navigation to the new workspace URL (`/editor/[newProjectId]`) upon renaming the active project.
+    - Verified complete build and TypeScript checking is fully passing.
+  - Code improvements and bug fixes:
+    - Fixed error handling on project rename (`PATCH /api/projects/[projectId]`) to catch unique ID conflicts and return a 409 Conflict response.
+    - Updated project creation (`POST /api/projects`) to stop accepting client-side controlled primary key IDs and return 400 Bad Request on JSON parse failures.
+    - Updated `useProjectActions.ts` client hook to not pass custom client-side project IDs, encode dynamic route parameters in pushes/replaces, and strongly type catch errors.
+    - Updated Accelerate protocol checks in `lib/prisma.ts` to consistently match `prisma+postgres://`.
+    - Added `emailNormalized` field, unique constraint, and index on `ProjectCollaborator` model to enable case-insensitive identity lookups, and successfully generated/applied DB migrations.
+    - Corrected the `07-wire-editor-home.md` spec document to match the single Project[] sidebar data contract.
+    - Fixed Next.js build optimization hanging by restoring `allowExitOnIdle: true` and `idleTimeoutMillis: 1000` to the pg pool connection options in `lib/prisma.ts`.
 
 ## In Progress
 
@@ -66,7 +96,11 @@ Update this file whenever the current phase, active feature, or implementation s
 - **Dialog Border Radius**: The default shadcn/ui dialog component's border radius is updated to `rounded-3xl` to comply with the modal/overlay design standard defined in `ui-context.md`.
 - **Renamed Middleware to Proxy**: Implemented route protection using Next.js 16's new `proxy.ts` file convention at the root instead of the deprecated `middleware.ts`.
 - **CSS Variable Theme Mapping**: Leveraged CSS custom properties (`var(...)`) inside the `ClerkProvider` variables option to dynamically theme Clerk's widgets without hardcoding colors.
+- **Dynamic Database Adapter Singleton**: Designed the cached Prisma Client to dynamically choose between serverless/edge Accelerate caching or direct connection pooling with `@prisma/adapter-pg` depending on the `DATABASE_URL` protocol.
+- **Prisma v7 Multi-file Directory Schema**: Configured directory schema loader resolving schema files under `prisma/models` dynamically, removing deprecated datasource params from the schema.
+- **Unified Prisma Client Return Type**: Applied the `.$extends(withAccelerate())` extension across all database client instantiation branches in `lib/prisma.ts`. This unifies the client's return type to a single extended Prisma Client signature, resolving a TypeScript compiler "expression is not callable" error on union type methods (e.g. `findUnique`).
+- **Middleware API Route Protection**: Configured `proxy.ts` middleware to intercept unauthenticated requests targeting `/api/...` paths and return structured `401 Unauthorized` JSON responses directly, preventing invalid page-redirect HTML returns on fetch calls.
 
 ## Session Notes
 
-- Wrapped up Clerk authentication setup. Ready to begin Phase 4 (Collaborative Canvas integrating Liveblocks and React Flow).
+- Resolved code audit findings. Applied fixes for API route handlers, project creation payloads, type checks, spec documents, and schema indexing. Successfully diagnosed and fixed the `npm run build` hanging issue by restoring idle timeout options to the PostgreSQL connection pool. Verified that the entire project compiles successfully and type-checks in less than 30 seconds.

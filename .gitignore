@@ -46,3 +46,5 @@ next-env.d.ts
 # agent tools and configurations
 /.agents/
 /skills-lock.json
+
+/app/generated/prisma
