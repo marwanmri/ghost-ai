@@ -15,8 +15,10 @@ import { Input } from "@/components/ui/input";
 import { Loader2, AlertTriangle, FolderOpen, Plus } from "lucide-react";
 import { EditorNavbar } from "@/components/editor/editor-navbar";
 import { ProjectSidebar } from "@/components/editor/project-sidebar";
+import { AiSidebar } from "@/components/editor/ai-sidebar";
 import { useProjectActions } from "@/hooks/useProjectActions";
 import { Project } from "@/lib/projects";
+import { ShareDialog } from "@/components/editor/share-dialog";
 
 interface EditorShellProps {
   projects: Project[];
@@ -30,6 +32,8 @@ export function EditorShell({
   children,
 }: EditorShellProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [aiSidebarOpen, setAiSidebarOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const router = useRouter();
 
   const {
@@ -49,12 +53,20 @@ export function EditorShell({
     handleDeleteProject,
   } = useProjectActions(activeProjectId);
 
+  const activeProject = activeProjectId
+    ? projects.find((p) => p.id === activeProjectId) || null
+    : null;
+
   return (
     <div className="relative min-h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
       {/* Top Navbar */}
       <EditorNavbar
         isSidebarOpen={sidebarOpen}
         onToggleSidebar={() => setSidebarOpen(!sidebarOpen)}
+        isAiSidebarOpen={aiSidebarOpen}
+        onToggleAiSidebar={() => setAiSidebarOpen(!aiSidebarOpen)}
+        activeProject={activeProject}
+        onShareClick={() => setShareDialogOpen(true)}
       />
 
       {/* Left Sidebar */}
@@ -76,11 +88,20 @@ export function EditorShell({
         onClickNewProject={openCreateDialog}
       />
 
+      {/* Right AI Sidebar */}
+      <AiSidebar
+        isOpen={aiSidebarOpen}
+        onClose={() => setAiSidebarOpen(false)}
+      />
+
       {/* Mobile Backdrop Scrim */}
-      {sidebarOpen && (
+      {(sidebarOpen || aiSidebarOpen) && (
         <div
           className="fixed inset-0 z-20 bg-black/60 backdrop-blur-sm md:hidden transition-opacity duration-300"
-          onClick={() => setSidebarOpen(false)}
+          onClick={() => {
+            setSidebarOpen(false);
+            setAiSidebarOpen(false);
+          }}
           aria-hidden="true"
         />
       )}
@@ -310,6 +331,16 @@ export function EditorShell({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* SHARE DIALOG */}
+      {activeProjectId && (
+        <ShareDialog
+          isOpen={shareDialogOpen}
+          onClose={() => setShareDialogOpen(false)}
+          projectId={activeProjectId}
+          isOwned={activeProject?.isOwned ?? false}
+        />
+      )}
     </div>
   );
 }

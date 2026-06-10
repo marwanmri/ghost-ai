@@ -77,6 +77,17 @@ Update this file whenever the current phase, active feature, or implementation s
     - Added `emailNormalized` field, unique constraint, and index on `ProjectCollaborator` model to enable case-insensitive identity lookups, and successfully generated/applied DB migrations.
     - Corrected the `07-wire-editor-home.md` spec document to match the single Project[] sidebar data contract.
     - Fixed Next.js build optimization hanging by restoring `allowExitOnIdle: true` and `idleTimeoutMillis: 1000` to the pg pool connection options in `lib/prisma.ts`.
+  - Editor Workspace Shell (`08-editor-workspace-shell.md`):
+    - Created `components/editor/access-denied.tsx` with centered layout, lock icon, and back link.
+    - Extracted identity and access checking logic into `lib/project-access.ts` to enforce server-side rules.
+    - Configured `app/editor/[projectId]/page.tsx` as a Server Component handling unauthorized access/redirects to `/sign-in` and missing projects to `AccessDenied`.
+    - Updated `EditorNavbar` inside `EditorShell` to receive and display the active project context, including Share and Sparkle AI toggle placeholders.
+  - Project Share Dialog (`09-share-dialog.md`):
+    - Implemented Backend Collaborators API route (`app/api/projects/[projectId]/collaborators/route.ts`) supporting GET (list and Clerk-enrich), POST (invite and access checks), and DELETE (remove).
+    - Integrated Clerk Backend SDK using direct client instantiation to resolve collaborator names and avatars.
+    - Created reusable `useCollaborators` client hook to manage collaborator data queries and API requests.
+    - Built premium `ShareDialog` component with `rounded-3xl` modal styles, copy links with 2-second visual clipboard feedback, and initials-avatar fallbacks.
+    - Integrated ShareDialog triggers into Editor Navbar and Shell.
 
 ## In Progress
 
