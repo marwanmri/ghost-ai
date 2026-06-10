@@ -80,6 +80,7 @@ export function EditorNavbar({
                 "hover:text-accent-ai-text hover:bg-accent-ai/10 transition-colors h-8 w-8 rounded-xl",
                 isAiSidebarOpen ? "text-accent-ai-text bg-accent-ai/10" : "text-accent-ai"
               )}
+              aria-label={isAiSidebarOpen ? "Close AI sidebar" : "Open AI sidebar"}
             >
               <Sparkles className="h-4 w-4" />
             </Button>

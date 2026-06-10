@@ -53,14 +53,12 @@ export function ShareDialog({
   const [emailInput, setEmailInput] = useState("");
   const [copied, setCopied] = useState(false);
 
-  // Clean errors on mount/open
+  // Fetch collaborators on open
   useEffect(() => {
     if (isOpen) {
-      setEmailInput("");
-      setInviteError(null);
       refreshCollaborators();
     }
-  }, [isOpen, refreshCollaborators, setInviteError]);
+  }, [isOpen, refreshCollaborators]);
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -72,11 +70,16 @@ export function ShareDialog({
     }
   };
 
-  const handleCopyLink = () => {
-    const url = `${window.location.origin}/editor/${projectId}`;
-    navigator.clipboard.writeText(url);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleCopyLink = async () => {
+    try {
+      const url = typeof window !== "undefined" ? `${window.location.origin}/editor/${projectId}` : `/editor/${projectId}`;
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      console.error("Failed to copy link to clipboard:", err);
+      setCopied(false);
+    }
   };
 
   const getInitials = (name: string, email: string): string => {
@@ -91,7 +94,13 @@ export function ShareDialog({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        setEmailInput("");
+        setInviteError(null);
+        onClose();
+      }
+    }}>
       <DialogContent className="bg-elevated border border-default rounded-3xl w-[95vw] max-w-lg sm:max-w-lg p-6 backdrop-blur-md">
         <DialogHeader className="space-y-2">
           <DialogTitle className="text-xl text-copy-primary tracking-wide flex items-center gap-2">

@@ -17,7 +17,7 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
 
   if (!access.hasAccess) {
     if (access.reason === "unauthenticated") {
-      redirect("/sign-in");
+      redirect(`/sign-in?redirect_url=${encodeURIComponent(`/editor/${projectId}`)}`);
     }
     return <AccessDenied />;
   }

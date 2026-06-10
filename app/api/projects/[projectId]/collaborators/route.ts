@@ -62,10 +62,18 @@ export async function GET(
     });
 
     // 3. Enrich Collaborators using Clerk if any exist
-    let enrichedCollaborators: any[] = [];
+    let enrichedCollaborators: Array<{
+      id: string;
+      email: string;
+      emailNormalized: string;
+      name: string;
+      avatar: string | null;
+      isOwner: boolean;
+      createdAt: Date;
+    }> = [];
     if (dbCollaborators.length > 0) {
       const emails = dbCollaborators.map((c) => c.emailNormalized);
-      let clerkUsers: any[] = [];
+      let clerkUsers: import("@clerk/backend").User[] = [];
       try {
         const response = await clerk.users.getUserList({
           emailAddress: emails,
@@ -79,7 +87,7 @@ export async function GET(
       enrichedCollaborators = dbCollaborators.map((collab) => {
         const match = clerkUsers.find((u) =>
           u.emailAddresses.some(
-            (e: any) => e.emailAddress.trim().toLowerCase() === collab.emailNormalized
+            (e) => e.emailAddress.trim().toLowerCase() === collab.emailNormalized
           )
         );
 

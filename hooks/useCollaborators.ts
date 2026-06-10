@@ -19,6 +19,7 @@ export function useCollaborators(projectId: string | null) {
   const [inviteError, setInviteError] = useState<string | null>(null);
 
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [removeError, setRemoveError] = useState<string | null>(null);
 
   const fetchCollaborators = useCallback(async () => {
     if (!projectId) {
@@ -37,8 +38,12 @@ export function useCollaborators(projectId: string | null) {
       }
       const data = await res.json();
       setCollaborators(data);
-    } catch (err: any) {
-      setError(err.message || "An unknown error occurred");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError(String(err) || "An unknown error occurred");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -65,8 +70,12 @@ export function useCollaborators(projectId: string | null) {
       // Reload the list of collaborators to get enriched data from Clerk
       await fetchCollaborators();
       return true;
-    } catch (err: any) {
-      setInviteError(err.message || "An unknown error occurred");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setInviteError(err.message);
+      } else {
+        setInviteError(String(err) || "An unknown error occurred");
+      }
       return false;
     } finally {
       setIsInviting(false);
@@ -76,6 +85,7 @@ export function useCollaborators(projectId: string | null) {
   const removeCollaborator = async (id: string): Promise<boolean> => {
     if (!projectId) return false;
     setRemovingId(id);
+    setRemoveError(null);
     try {
       const res = await fetch(`/api/projects/${projectId}/collaborators`, {
         method: "DELETE",
@@ -88,9 +98,12 @@ export function useCollaborators(projectId: string | null) {
       }
       setCollaborators((prev) => prev.filter((c) => c.id !== id));
       return true;
-    } catch (err: any) {
-      console.error(err);
-      alert(err.message || "Failed to remove collaborator");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setRemoveError(err.message);
+      } else {
+        setRemoveError(String(err) || "Failed to remove collaborator");
+      }
       return false;
     } finally {
       setRemovingId(null);
@@ -105,6 +118,8 @@ export function useCollaborators(projectId: string | null) {
     inviteError,
     setInviteError,
     removingId,
+    removeError,
+    setRemoveError,
     inviteCollaborator,
     removeCollaborator,
     refreshCollaborators: fetchCollaborators,
