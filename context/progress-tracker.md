@@ -88,6 +88,22 @@ Update this file whenever the current phase, active feature, or implementation s
     - Created reusable `useCollaborators` client hook to manage collaborator data queries and API requests.
     - Built premium `ShareDialog` component with `rounded-3xl` modal styles, copy links with 2-second visual clipboard feedback, and initials-avatar fallbacks.
     - Integrated ShareDialog triggers into Editor Navbar and Shell.
+  - Liveblocks Setup (`10-liveblocks-setup.md`):
+    - Added `@liveblocks/node` for server-side Liveblocks room and token APIs.
+    - Configured `liveblocks.config.ts` with typed realtime presence (`cursor`, `isThinking`) and user metadata (`name`, `avatar`, `color`).
+    - Created cached Liveblocks Node client infrastructure in `lib/liveblocks.ts`.
+    - Added deterministic user cursor color mapping from Clerk user IDs using a fixed palette.
+    - Created `POST /api/liveblocks-auth` to require Clerk authentication, verify project access, use the project ID as the room ID, create the room if needed, ensure the verified user has room write access, and return a Liveblocks identity token with user metadata.
+  - Collaborative Canvas Foundation (`11-bsse-canvas.md`):
+    - Added the initial Liveblocks-backed React Flow canvas foundation, including visible empty-canvas chrome.
+  - Canvas Shape Panel (`12-shape-panel.md`):
+    - Added a floating pill-shaped toolbar at the bottom-center of the canvas.
+    - Added draggable icon buttons for rectangle, diamond, circle, pill, cylinder, and hexagon shapes.
+    - Implemented drag payload with shape name and default size.
+    - Added dragover and drop handling to the ReactFlow instance.
+    - On drop, converted screen position to canvas coordinates and created live collaborative nodes.
+    - Generated node IDs using shape name, timestamp, and a counter.
+    - Created a basic renderer for the custom `canvasNode` type.
 
 ## In Progress
 
@@ -95,7 +111,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- Collaborative Canvas (Liveblocks & React Flow integration)
+- Node Selection & Mutability (or Next Feature)
 
 ## Open Questions
 
@@ -111,7 +127,13 @@ Update this file whenever the current phase, active feature, or implementation s
 - **Prisma v7 Multi-file Directory Schema**: Configured directory schema loader resolving schema files under `prisma/models` dynamically, removing deprecated datasource params from the schema.
 - **Unified Prisma Client Return Type**: Applied the `.$extends(withAccelerate())` extension across all database client instantiation branches in `lib/prisma.ts`. This unifies the client's return type to a single extended Prisma Client signature, resolving a TypeScript compiler "expression is not callable" error on union type methods (e.g. `findUnique`).
 - **Middleware API Route Protection**: Configured `proxy.ts` middleware to intercept unauthenticated requests targeting `/api/...` paths and return structured `401 Unauthorized` JSON responses directly, preventing invalid page-redirect HTML returns on fetch calls.
+- **Liveblocks Room Authorization Boundary**: Liveblocks room IDs are the existing project IDs, and `POST /api/liveblocks-auth` issues tokens only after Clerk authentication and `checkProjectAccess(projectId)` succeeds.
 
 ## Session Notes
 
-- Resolved code audit findings. Applied fixes for API route handlers, project creation payloads, type checks, spec documents, and schema indexing. Successfully diagnosed and fixed the `npm run build` hanging issue by restoring idle timeout options to the PostgreSQL connection pool. Verified that the entire project compiles successfully and type-checks in less than 30 seconds.
+- Implemented the Liveblocks collaboration infrastructure setup from `10-liveblocks-setup.md`, including typed presence/user metadata, cached Node client setup, deterministic cursor colors, private room creation, per-user room write access, and a project-access-protected auth endpoint. Verified the change set with a successful `npm run build`.
+- Added the initial Liveblocks-backed React Flow canvas foundation for `11-bsse-canvas.md`, including visible empty-canvas chrome so an empty shared room reads as an active collaborative canvas instead of a blank page.
+- Implemented Canvas Shape Panel from `12-shape-panel.md` with dragging shapes, dropping to create new collaborative nodes, and a basic `canvasNode` custom renderer. Verified with `npm run build`.
+- Fixed visual issues from `context/current-issues.archived.md`:
+  - Removed the redundant `CanvasStatusOverlay` placeholder layers (including the central message modal and badge status bars) to clean up the canvas workspace.
+  - Rewrote the custom node renderer (`CanvasNodeComponent`) to accurately represent all target shapes (rectangle, circle, pill, diamond, hexagon, and cylinder) utilizing responsive inline SVG wrappers and CSS styling. Verified with `npm run build`.
