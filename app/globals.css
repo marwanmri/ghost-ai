@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@xyflow/react/dist/style.css";
 
 @custom-variant dark (&:is(.dark *));
 
@@ -22,7 +23,7 @@
 @theme inline {
   --font-heading: var(--font-sans);
   --font-sans: var(--font-sans);
-  
+
   /* Font Family Mappings */
   --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-geist-mono), ui-monospace, SFMono-Regular, monospace;
@@ -32,19 +33,19 @@
   --color-surface: var(--bg-surface);
   --color-elevated: var(--bg-elevated);
   --color-subtle: var(--bg-subtle);
-  
+
   --color-default: var(--border-default);
   --color-subtle-border: var(--border-subtle);
   --color-surface-border: var(--border-default);
-  
+
   --color-copy-primary: var(--text-primary);
   --color-copy-muted: var(--text-muted);
-  
+
   --color-brand: var(--accent-primary);
   --color-accent-dim: var(--accent-primary-dim);
   --color-accent-ai: var(--accent-ai);
   --color-accent-ai-text: var(--accent-ai-text);
-  
+
   --color-state-error: var(--state-error);
   --color-state-success: var(--state-success);
   --color-state-warning: var(--state-warning);
@@ -111,32 +112,32 @@
   /* Shadcn UI Overrides (mapping to our variables) */
   --background: var(--bg-base);
   --foreground: var(--text-primary);
-  
+
   --card: var(--bg-surface);
   --card-foreground: var(--text-primary);
-  
+
   --popover: var(--bg-elevated);
   --popover-foreground: var(--text-primary);
-  
+
   --primary: var(--accent-primary);
   --primary-foreground: var(--bg-base);
-  
+
   --secondary: var(--bg-subtle);
   --secondary-foreground: var(--text-primary);
-  
+
   --muted: var(--bg-subtle);
   --muted-foreground: var(--text-muted);
-  
+
   --accent: var(--bg-subtle);
   --accent-foreground: var(--text-primary);
-  
+
   --destructive: var(--state-error);
   --destructive-foreground: var(--text-primary);
-  
+
   --border: var(--border-default);
   --input: var(--border-subtle);
   --ring: var(--accent-primary);
-  
+
   --radius: 0.625rem;
 
   --sidebar: var(--bg-surface);
@@ -188,7 +189,7 @@
   --border: var(--border-default);
   --input: var(--border-subtle);
   --ring: var(--accent-primary);
-  
+
   --radius: 0.625rem;
   --sidebar: var(--bg-surface);
   --sidebar-foreground: var(--text-primary);

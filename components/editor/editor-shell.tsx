@@ -58,7 +58,7 @@ export function EditorShell({
     : null;
 
   return (
-    <div className="relative min-h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
+    <div className="relative h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
       {/* Top Navbar */}
       <EditorNavbar
         isSidebarOpen={sidebarOpen}
