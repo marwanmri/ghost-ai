@@ -17,7 +17,7 @@ import {
   AlertTriangle,
   Loader2,
 } from "lucide-react";
-import type { CanvasEdge, CanvasNode } from "@/types/canvas";
+import type { CanvasEdge, CanvasNode, CanvasNodeShape } from "@/types/canvas";
 import { DEFAULT_NODE_COLOR } from "@/types/canvas";
 import { ShapePanel } from "../canvas/shape-panel";
 import { CanvasNodeComponent } from "../canvas/nodes/canvas-node";
@@ -87,12 +87,30 @@ function LiveblocksCanvas() {
     });
 
   const reactFlow = useReactFlow();
-  const nodeCounter = React.useRef(0);
 
   const onDragOver = React.useCallback((event: React.DragEvent) => {
     event.preventDefault();
     event.dataTransfer.dropEffect = "move";
   }, []);
+
+  const insertShapeNode = React.useCallback(
+    (shape: CanvasNodeShape, width: number, height: number, position: { x: number; y: number }) => {
+      const newNodeId = crypto.randomUUID();
+      const newNode: CanvasNode = {
+        id: newNodeId,
+        type: "canvasNode",
+        position,
+        style: { width, height },
+        data: {
+          label: "",
+          shape,
+          color: DEFAULT_NODE_COLOR,
+        },
+      };
+      onNodesChange([{ type: "add", item: newNode }]);
+    },
+    [onNodesChange]
+  );
 
   const onDrop = React.useCallback(
     (event: React.DragEvent) => {
@@ -104,31 +122,42 @@ function LiveblocksCanvas() {
         return;
       }
 
-      const shapeData = JSON.parse(type);
-      
+      let shapeData: { shape: CanvasNodeShape; width: number; height: number };
+      try {
+        shapeData = JSON.parse(type) as { shape: CanvasNodeShape; width: number; height: number };
+      } catch {
+        return;
+      }
+
+      if (
+        !shapeData ||
+        typeof shapeData !== "object" ||
+        typeof shapeData.shape !== "string" ||
+        typeof shapeData.width !== "number" ||
+        typeof shapeData.height !== "number"
+      ) {
+        return;
+      }
+
       const position = reactFlow.screenToFlowPosition({
         x: event.clientX,
         y: event.clientY,
       });
 
-      nodeCounter.current += 1;
-      const newNodeId = `${shapeData.shape}-${Date.now()}-${nodeCounter.current}`;
-
-      const newNode: CanvasNode = {
-        id: newNodeId,
-        type: "canvasNode",
-        position,
-        style: { width: shapeData.width, height: shapeData.height },
-        data: {
-          label: "",
-          shape: shapeData.shape,
-          color: DEFAULT_NODE_COLOR,
-        },
-      };
-
-      reactFlow.setNodes((nds) => nds.concat(newNode));
+      insertShapeNode(shapeData.shape, shapeData.width, shapeData.height, position);
     },
-    [reactFlow]
+    [reactFlow, insertShapeNode]
+  );
+
+  const handleInsertShape = React.useCallback(
+    (shape: CanvasNodeShape, width: number, height: number) => {
+      const position = reactFlow.screenToFlowPosition({
+        x: window.innerWidth / 2,
+        y: window.innerHeight / 2,
+      });
+      insertShapeNode(shape, width, height, position);
+    },
+    [reactFlow, insertShapeNode]
   );
 
   return (
@@ -161,7 +190,7 @@ function LiveblocksCanvas() {
           color="var(--border-subtle)"
         />
       </ReactFlow>
-      <ShapePanel />
+      <ShapePanel onInsertShape={handleInsertShape} />
     </div>
   );
 }

@@ -134,6 +134,6 @@ Update this file whenever the current phase, active feature, or implementation s
 - Implemented the Liveblocks collaboration infrastructure setup from `10-liveblocks-setup.md`, including typed presence/user metadata, cached Node client setup, deterministic cursor colors, private room creation, per-user room write access, and a project-access-protected auth endpoint. Verified the change set with a successful `npm run build`.
 - Added the initial Liveblocks-backed React Flow canvas foundation for `11-bsse-canvas.md`, including visible empty-canvas chrome so an empty shared room reads as an active collaborative canvas instead of a blank page.
 - Implemented Canvas Shape Panel from `12-shape-panel.md` with dragging shapes, dropping to create new collaborative nodes, and a basic `canvasNode` custom renderer. Verified with `npm run build`.
-- Fixed visual issues from `context/current-issues.md`:
+- Fixed visual issues from `context/current-issues.archived.md`:
   - Removed the redundant `CanvasStatusOverlay` placeholder layers (including the central message modal and badge status bars) to clean up the canvas workspace.
   - Rewrote the custom node renderer (`CanvasNodeComponent`) to accurately represent all target shapes (rectangle, circle, pill, diamond, hexagon, and cylinder) utilizing responsive inline SVG wrappers and CSS styling. Verified with `npm run build`.

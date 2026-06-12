@@ -20,7 +20,11 @@ const SHAPES: ShapeOption[] = [
   { type: "hexagon", icon: Hexagon, width: 160, height: 160 },
 ];
 
-export function ShapePanel() {
+interface ShapePanelProps {
+  onInsertShape?: (shape: CanvasNodeShape, width: number, height: number) => void;
+}
+
+export function ShapePanel({ onInsertShape }: ShapePanelProps) {
   const onDragStart = (event: React.DragEvent, shape: ShapeOption) => {
     event.dataTransfer.setData(
       "application/reactflow",
@@ -39,6 +43,13 @@ export function ShapePanel() {
             className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-accent-dim text-copy-muted hover:text-brand transition-colors cursor-grab active:cursor-grabbing"
             draggable
             onDragStart={(e) => onDragStart(e, shape)}
+            onClick={() => onInsertShape?.(shape.type, shape.width, shape.height)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onInsertShape?.(shape.type, shape.width, shape.height);
+              }
+            }}
             title={shape.type}
           >
             <Icon className="h-5 w-5" />

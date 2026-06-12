@@ -1,4 +1,4 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
+import { auth, currentUser, clerkClient } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
 import { getCursorColorForUser, getLiveblocksClient } from "@/lib/liveblocks";
@@ -76,21 +76,68 @@ export async function POST(request: Request) {
     const liveblocks = getLiveblocksClient();
     const roomId = projectId;
 
+    const project = access.project;
+    if (!project) {
+      return NextResponse.json({ error: "Project not found" }, { status: 404 });
+    }
+
+    const clerk = await clerkClient();
+    const emails = project.collaborators.map((c) => c.emailNormalized);
+    let collaboratorUserIds: string[] = [];
+    if (emails.length > 0) {
+      try {
+        const response = await clerk.users.getUserList({
+          emailAddress: emails,
+          limit: 100,
+        });
+        collaboratorUserIds = response.data.map((u) => u.id);
+      } catch (e) {
+        console.error("Error fetching collaborator user IDs from Clerk:", e);
+      }
+    }
+
+    const canonicalMapping: Record<string, ["room:write"]> = {};
+    const memberIds = Array.from(new Set([
+      project.ownerId,
+      ...collaboratorUserIds,
+      userId
+    ]));
+    for (const id of memberIds) {
+      canonicalMapping[id] = ["room:write"];
+    }
+
     const room = await liveblocks.getOrCreateRoom(roomId, {
       defaultAccesses: [],
-      usersAccesses: {
-        [userId]: ["room:write"],
-      },
+      usersAccesses: canonicalMapping,
       metadata: {
         projectId,
       },
     });
 
-    if (!room.usersAccesses[userId]) {
+    const updateUsersAccesses: Record<string, ["room:write"] | null> = {};
+    let needsUpdate = false;
+
+    // Check for additions / upgrades
+    for (const key of Object.keys(canonicalMapping)) {
+      const roomAccess = room.usersAccesses[key];
+      if (!roomAccess || roomAccess.length !== 1 || roomAccess[0] !== "room:write") {
+        updateUsersAccesses[key] = ["room:write"];
+        needsUpdate = true;
+      }
+    }
+
+    // Check for revocations
+    for (const key of Object.keys(room.usersAccesses)) {
+      if (!(key in canonicalMapping)) {
+        updateUsersAccesses[key] = null;
+        needsUpdate = true;
+      }
+    }
+
+    if (needsUpdate) {
       await liveblocks.updateRoom(roomId, {
-        usersAccesses: {
-          [userId]: ["room:write"],
-        },
+        usersAccesses: updateUsersAccesses,
+        metadata: { projectId },
       });
     }
 

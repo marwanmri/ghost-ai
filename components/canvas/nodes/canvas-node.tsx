@@ -118,7 +118,7 @@ export function CanvasNodeComponent({ data, selected }: NodeProps<CanvasNode>) {
       default:
         return (
           <div
-            className="absolute inset-0 rounded-xl border"
+            className="absolute inset-0 rounded-xl border transition-all duration-200"
             style={{
               backgroundColor,
               borderColor,

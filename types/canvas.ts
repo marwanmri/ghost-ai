@@ -31,7 +31,7 @@ export const NODE_COLORS = [
 ] as const satisfies readonly CanvasNodeColor[];
 
 export const DEFAULT_NODE_COLOR = NODE_COLORS[0];
-export const DEFAULT_NODE_SHAPE = "rectangle" satisfies CanvasNodeShape;
+export const DEFAULT_NODE_SHAPE = "rectangle" as const;
 
 export interface CanvasNodeData extends Record<string, unknown> {
   label: string;
