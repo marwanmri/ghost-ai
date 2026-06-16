@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Circle, Square, Diamond, Hexagon, Cylinder, RectangleHorizontal } from "lucide-react";
+import { Circle, Square, Diamond, Hexagon, Cylinder, RectangleHorizontal, Cable } from "lucide-react";
 import type { CanvasNodeShape } from "@/types/canvas";
 
 interface ShapeOption {
@@ -22,15 +22,34 @@ const SHAPES: ShapeOption[] = [
 
 interface ShapePanelProps {
   onInsertShape?: (shape: CanvasNodeShape, width: number, height: number) => void;
+  onDragStart?: (shape: CanvasNodeShape, width: number, height: number) => void;
+  onDragEnd?: () => void;
+  isConnectingMode?: boolean;
+  onToggleConnectingMode?: () => void;
+  hasSelectedNode?: boolean;
 }
 
-export function ShapePanel({ onInsertShape }: ShapePanelProps) {
-  const onDragStart = (event: React.DragEvent, shape: ShapeOption) => {
+export function ShapePanel({
+  onInsertShape,
+  onDragStart,
+  onDragEnd,
+  isConnectingMode = false,
+  onToggleConnectingMode,
+  hasSelectedNode = false,
+}: ShapePanelProps) {
+  const handleDragStart = (event: React.DragEvent, shape: ShapeOption) => {
     event.dataTransfer.setData(
       "application/reactflow",
       JSON.stringify({ shape: shape.type, width: shape.width, height: shape.height })
     );
     event.dataTransfer.effectAllowed = "move";
+
+    // Disable default browser drag ghost image
+    const img = new Image();
+    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7";
+    event.dataTransfer.setDragImage(img, 0, 0);
+
+    onDragStart?.(shape.type, shape.width, shape.height);
   };
 
   return (
@@ -42,7 +61,8 @@ export function ShapePanel({ onInsertShape }: ShapePanelProps) {
             key={shape.type}
             className="flex h-10 w-10 items-center justify-center rounded-full hover:bg-accent-dim text-copy-muted hover:text-brand transition-colors cursor-grab active:cursor-grabbing"
             draggable
-            onDragStart={(e) => onDragStart(e, shape)}
+            onDragStart={(e) => handleDragStart(e, shape)}
+            onDragEnd={onDragEnd}
             onClick={() => onInsertShape?.(shape.type, shape.width, shape.height)}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
@@ -56,6 +76,32 @@ export function ShapePanel({ onInsertShape }: ShapePanelProps) {
           </button>
         );
       })}
+
+      {/* Separator */}
+      <div className="w-px h-6 bg-default/70 mx-1" />
+
+      {/* Connector Tool Button */}
+      <button
+        onClick={onToggleConnectingMode}
+        disabled={!hasSelectedNode}
+        className={`flex h-10 w-10 items-center justify-center rounded-full transition-all duration-200 ${
+          isConnectingMode
+            ? "bg-accent-dim text-brand border border-brand/30 shadow-[0_0_12px_rgba(0,200,212,0.25)]"
+            : hasSelectedNode
+            ? "text-copy-muted hover:text-brand hover:bg-accent-dim cursor-pointer"
+            : "text-faint cursor-not-allowed opacity-50"
+        }`}
+        title={
+          hasSelectedNode
+            ? isConnectingMode
+              ? "Connecting Mode: Click another node to connect (Esc to cancel)"
+              : "Connector Tool: Draw connection to another node"
+            : "Connector Tool: Select a node first to connect"
+        }
+      >
+        <Cable className="h-5 w-5" />
+      </button>
     </div>
   );
 }
+

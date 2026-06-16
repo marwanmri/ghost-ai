@@ -7,9 +7,9 @@ Update this file whenever the current phase, active feature, or implementation s
 - Phase 4: Collaborative Canvas (Liveblocks & React Flow integration)
 
 ## Current Goal
-
-- Integrate Liveblocks and React Flow to establish a collaborative canvas surface with node/edge updates.
-
+ 
+- Implement a curated library of starter system design templates (e.g. monolith, microservices, serverless, event-driven) and the importing mechanism to load them into the collaborative canvas in real-time.
+ 
 ## Completed
 
 - Boilerplate cleanup (globals.css, public directory SVGs, page.tsx layout).
@@ -104,6 +104,33 @@ Update this file whenever the current phase, active feature, or implementation s
     - On drop, converted screen position to canvas coordinates and created live collaborative nodes.
     - Generated node IDs using shape name, timestamp, and a counter.
     - Created a basic renderer for the custom `canvasNode` type.
+- Node Resizing, Inline Label Editing, and Node Connectivity (`14-node-editing.md`):
+  - Integrated React Flow `<NodeResizer>` controls inside `CanvasNodeComponent` visible when selected, configured with constraints (`minWidth={80}`, `minHeight={60}`).
+  - Built inline double-click label editing utilizing an overlay textarea that auto-resizes to fit text lines centered within the node shape, updating values in real-time.
+  - Implemented custom `CenterConnectionEdge` drawing straight lines between node centers, which dynamically updates source/target layout coordinates upon movement or resize.
+  - Created a bottom toolbar connector tool that triggers crosshair connection state, tracking mouse movement to display a dashed live connection line, and completing edges on target node click.
+  - Verified code correctness with successful production build and linting checks.
+- Floating Node Color Toolbar (`15-nodes-color-toolbar.md`):
+  - Imported `NODE_COLORS` palette mapping from `types/canvas.ts`.
+  - Built custom `ColorSwatch` component rendering swatches with hover glows matching their text colors and styled active indicator dots.
+  - Implemented the floating toolbar in `CanvasNodeComponent` absolutely positioned above selected nodes.
+  - Added click and drag interceptors (`nodrag`, `nopan`, `stopPropagation()`) preventing canvas navigation during swatch interactions.
+  - Wired swatch click to React Flow's `setNodes` state updates to change background and text colors dynamically without server calls.
+  - Verified compilation and layout updates cleanly in local test environment.
+- Node Connections & Custom Edges (`16-node-connections.md`):
+  - Added types `CanvasEdgeVariant`, `CanvasEdgeArrowDirection`, `CanvasEdgeConnectionType`, and `CanvasEdgeControlPoint` in `types/canvas.ts`.
+  - Added boundary intersection calculations `getNodeIntersection` so arrowheads align perfectly with node boundaries.
+  - Implemented path spline math for curve routing and polyline midpoints for flexible label rendering.
+  - Created interactive drag handles and body click-to-create controls for flexible path drawing.
+  - Implemented a premium floating settings dialog card (`EdgeSettingsDialog`) overlay at click coordinates supporting text labels, variant styles (solid, dotted, dashed), arrow direction settings, and curve routing options, syncing to all collaborators in real-time.
+  - Verified compilation and lint rules pass cleanly with zero compiler warnings in updated files.
+- Node Connection Refinements (`context/current-issues.md`):
+  - Implemented canvas auto-panning and dialog bounding inside `handleEdgeDoubleClick` so settings popup is never cut off.
+  - Changed the click-outside overlay listener to run in the capture phase, enabling background click-closing to work reliably.
+  - Replaced text-based buttons for variants, directions, and routings with visual inline SVG previews and Lucide icons.
+  - Scaled connection line arrowheads markers sizes from 5 to 7.
+  - Refactored `CenterConnectionEdge` to support adjustable curve curvature by dragging the curve body and editing handles.
+  - Verified compilation and lint check passes successfully.
 
 ## In Progress
 
@@ -137,3 +164,18 @@ Update this file whenever the current phase, active feature, or implementation s
 - Fixed visual issues from `context/current-issues.archived.md`:
   - Removed the redundant `CanvasStatusOverlay` placeholder layers (including the central message modal and badge status bars) to clean up the canvas workspace.
   - Rewrote the custom node renderer (`CanvasNodeComponent`) to accurately represent all target shapes (rectangle, circle, pill, diamond, hexagon, and cylinder) utilizing responsive inline SVG wrappers and CSS styling. Verified with `npm run build`.
+- Implemented the Floating Node Color Toolbar (`15-nodes-color-toolbar.md`):
+  - Built floating toolbar with 8 swatches matching predefined color pairs from `types/canvas.ts`.
+  - Added micro-interaction styling to swatches, including scaling up and showing a tight, controlled glow based on their foreground text color on hover.
+  - Placed click/drag event interceptors to prevent canvas panning and node dragging during swatch interaction.
+  - Verified compilation and visual updates interactively via browser subagent.
+- Implemented Node Connections and Custom Edges (`16-node-connections.md`):
+  - Engineered path intersection math to terminate connections at bounding box borders, keeping arrow markers perfectly visible.
+  - Integrated spline and polyline midpoints with support for double-click settings dialog and interactive control points.
+  - Resolved hook ordering and eslint-disable warnings. Verified compile and build.
+- Refined Node Connections and Settings Dialog Overlay (`context/current-issues.md`):
+  - Implemented canvas auto-panning and position bounding for popup settings card visibility.
+  - Upgraded click-outside listener to capture phase, enabling background click-closing.
+  - Swapped text buttons with inline SVG visual style lines and Lucide React icons (`Ban`, `ArrowRight`, `ArrowLeft`, `ArrowLeftRight`, `Minus`, `Spline`, `Route`).
+  - Scaled arrowhead markers to 7px.
+  - Engineered adjustable curves supporting custom curve midpoint drag-editing and reset.
