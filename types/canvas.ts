@@ -41,8 +41,22 @@ export interface CanvasNodeData extends Record<string, unknown> {
 
 export type CanvasNode = Node<CanvasNodeData, typeof CANVAS_NODE_TYPE>;
 
+export type CanvasEdgeVariant = "solid" | "dotted" | "dashed";
+export type CanvasEdgeArrowDirection = "none" | "bidirectional" | "source-to-target" | "target-to-source";
+export type CanvasEdgeConnectionType = "straight" | "curve" | "flexible";
+
+export interface CanvasEdgeControlPoint {
+  x: number;
+  y: number;
+}
+
 export interface CanvasEdgeData extends Record<string, unknown> {
   label?: string;
+  variant?: CanvasEdgeVariant;
+  arrowDirection?: CanvasEdgeArrowDirection;
+  connectionType?: CanvasEdgeConnectionType;
+  controlPoints?: CanvasEdgeControlPoint[];
 }
 
 export type CanvasEdge = Edge<CanvasEdgeData, typeof CANVAS_EDGE_TYPE>;
+
