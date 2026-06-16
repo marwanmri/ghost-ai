@@ -49,7 +49,16 @@ export function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNode
   // Label editing state
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(data.label);
+  const [prevLabel, setPrevLabel] = useState(data.label);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // Sync editValue if label changed externally and user is not editing
+  if (data.label !== prevLabel) {
+    setPrevLabel(data.label);
+    if (!isEditing) {
+      setEditValue(data.label);
+    }
+  }
 
   // Automatically adjust textarea height to fit content centered inside the node
   useEffect(() => {

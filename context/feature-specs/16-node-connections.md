@@ -33,9 +33,14 @@ When the connection line is dubble clicked, a popup diolog will appear on top of
 
 ## Dialog layout
 
-The dialog popup should be somewhat close to reference picture `context/screenshots/dialog.png`. It should have proper white space and each group of settings should be devided by a thin line.
-
-the colors and UI should be compatible with overall desin and using our global design reference
+The dialog popup is a floating settings card with a fixed width of `280px` placed at the double-click coordinates, offset vertically by `12px` (using `translate(-50%, -100%)`). 
+It must adhere to the global design token system defined in `context/ui-context.md`:
+1. **Background**: Elevated surface background (`--bg-elevated` / `#18181c` with `95%` opacity) and a backdrop blur of `8px` (`backdrop-blur-md`).
+2. **Borders**: Thin border using default border color (`--border-default` / `#2a2a30` or `--border-default/40` for internal dividers).
+3. **Corner Radius**: Standard modal/overlay border-radius of `rounded-3xl` (`24px`).
+4. **Spacing & Padding**: Inner padding of `16px` (`p-4`), with a vertical item gap of `12px` (`gap-3`) separating each settings section. Internal dividers are styled as thin horizontal borders (`border-t border-default/40`).
+5. **Typography**: Labels are in uppercase extra-small Geist Sans (`text-xs font-semibold text-copy-muted tracking-wider`) with `6px` (`mb-1.5`) bottom margin. Values and text inputs use regular Geist Sans (`text-xs text-copy-primary`) with custom padding (`px-3 py-1.5`) and background matching subtle surface (`bg-subtle` / `#1e1e23`).
+6. **Icons & Controls**: Buttons use Lucide React icons styled at `16px` (`h-4 w-4`) and inline SVGs representing line variants. Selected options highlight in brand cyan accent (`--accent-primary` / `#00c8d4`) with subtle elevations and shadows.
 
 ## Scope Limits
 

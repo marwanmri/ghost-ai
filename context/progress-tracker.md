@@ -8,7 +8,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Goal
  
-- Implement custom connection lines between nodes, custom styling (solid, dotted, dashed), direction indicators, curve and flexible routing, and inline settings dialog.
+- Implement a curated library of starter system design templates (e.g. monolith, microservices, serverless, event-driven) and the importing mechanism to load them into the collaborative canvas in real-time.
  
 ## Completed
 

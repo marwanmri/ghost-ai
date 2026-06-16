@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useRef, useEffect } from "react";
+import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import { LiveblocksProvider, RoomProvider } from "@liveblocks/react";
 import { ClientSideSuspense } from "@liveblocks/react/suspense";
 import { useLiveblocksFlow } from "@liveblocks/react-flow";
@@ -15,6 +15,7 @@ import {
   useViewport,
   EdgeProps,
   EdgeLabelRenderer,
+  EdgeChange,
 } from "@xyflow/react";
 import {
   AlertTriangle,
@@ -162,8 +163,9 @@ function CenterConnectionEdge({
   style,
   selected,
   data,
-}: EdgeProps<CanvasEdge>) {
-  const { getNode, setEdges, screenToFlowPosition } = useReactFlow();
+  onEdgesChange,
+}: EdgeProps<CanvasEdge> & { onEdgesChange?: (changes: EdgeChange<CanvasEdge>[]) => void }) {
+  const { getNode, getEdge, screenToFlowPosition } = useReactFlow<CanvasNode, CanvasEdge>();
   const sourceNode = getNode(source);
   const targetNode = getNode(target);
 
@@ -331,6 +333,9 @@ function CenterConnectionEdge({
       const dx = moveEvent.clientX - startX;
       const dy = moveEvent.clientY - startY;
 
+      const currentEdge = getEdge(id);
+      if (!currentEdge || !onEdgesChange) return;
+
       if (!hasCreated) {
         // Drag threshold of 5px to distinguish drag from click/double-click
         if (dx * dx + dy * dy < 25) return;
@@ -339,22 +344,16 @@ function CenterConnectionEdge({
 
         if (connectionType === "curve") {
           createdIndex = 0;
-          setEdges((eds) =>
-            eds.map((e) => {
-              if (e.id === id) {
-                return {
-                  ...e,
-                  data: {
-                    ...e.data,
-                    controlPoints: [clickPos],
-                  },
-                };
-              }
-              return e;
-            })
-          );
+          const updatedEdge = {
+            ...currentEdge,
+            data: {
+              ...currentEdge.data,
+              controlPoints: [clickPos],
+            },
+          };
+          onEdgesChange([{ type: "replace", id, item: updatedEdge }]);
         } else {
-          const currentCPs = [...controlPoints];
+          const currentCPs = [...(currentEdge.data?.controlPoints || [])];
           const points = [{ x: sx, y: sy }, ...currentCPs, { x: tx, y: ty }];
           
           let closestSegmentIdx = 0;
@@ -387,20 +386,14 @@ function CenterConnectionEdge({
           const newControlPoints = [...currentCPs];
           newControlPoints.splice(createdIndex, 0, clickPos);
 
-          setEdges((eds) =>
-            eds.map((e) => {
-              if (e.id === id) {
-                return {
-                  ...e,
-                  data: {
-                    ...e.data,
-                    controlPoints: newControlPoints,
-                  },
-                };
-              }
-              return e;
-            })
-          );
+          const updatedEdge = {
+            ...currentEdge,
+            data: {
+              ...currentEdge.data,
+              controlPoints: newControlPoints,
+            },
+          };
+          onEdgesChange([{ type: "replace", id, item: updatedEdge }]);
         }
       } else {
         const newPos = screenToFlowPosition({
@@ -408,35 +401,30 @@ function CenterConnectionEdge({
           y: moveEvent.clientY,
         });
 
-        setEdges((eds) =>
-          eds.map((e) => {
-            if (e.id === id) {
-              const canvasEdge = e as CanvasEdge;
-              const currentPoints = [...(canvasEdge.data?.controlPoints || [])];
-              if (currentPoints[createdIndex]) {
-                currentPoints[createdIndex] = { x: newPos.x, y: newPos.y };
-              }
-              return {
-                ...e,
-                data: {
-                  ...e.data,
-                  controlPoints: currentPoints,
-                },
-              };
-            }
-            return e;
-          })
-        );
+        const currentPoints = [...(currentEdge.data?.controlPoints || [])];
+        if (currentPoints[createdIndex]) {
+          currentPoints[createdIndex] = { x: newPos.x, y: newPos.y };
+        }
+        const updatedEdge = {
+          ...currentEdge,
+          data: {
+            ...currentEdge.data,
+            controlPoints: currentPoints,
+          },
+        };
+        onEdgesChange([{ type: "replace", id, item: updatedEdge }]);
       }
     };
 
     const onPointerUp = () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
 
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
   };
 
   const handleControlPointPointerDown = (event: React.PointerEvent, index: number) => {
@@ -445,70 +433,61 @@ function CenterConnectionEdge({
     if (event.button !== 0) return;
 
     const onPointerMove = (moveEvent: PointerEvent) => {
+      const currentEdge = getEdge(id);
+      if (!currentEdge || !onEdgesChange) return;
+
       const newPos = screenToFlowPosition({
         x: moveEvent.clientX,
         y: moveEvent.clientY,
       });
 
-      setEdges((eds) =>
-        eds.map((e) => {
-          if (e.id === id) {
-            const canvasEdge = e as CanvasEdge;
-            const currentPoints = [...(canvasEdge.data?.controlPoints || [])];
-            currentPoints[index] = { x: newPos.x, y: newPos.y };
-            return {
-              ...e,
-              data: {
-                ...e.data,
-                controlPoints: currentPoints,
-              },
-            };
-          }
-          return e;
-        })
-      );
+      const currentPoints = [...(currentEdge.data?.controlPoints || [])];
+      currentPoints[index] = { x: newPos.x, y: newPos.y };
+      const updatedEdge = {
+        ...currentEdge,
+        data: {
+          ...currentEdge.data,
+          controlPoints: currentPoints,
+        },
+      };
+      onEdgesChange([{ type: "replace", id, item: updatedEdge }]);
     };
 
     const onPointerUp = () => {
       window.removeEventListener("pointermove", onPointerMove);
       window.removeEventListener("pointerup", onPointerUp);
+      window.removeEventListener("pointercancel", onPointerUp);
     };
 
     window.addEventListener("pointermove", onPointerMove);
     window.addEventListener("pointerup", onPointerUp);
+    window.addEventListener("pointercancel", onPointerUp);
   };
 
   const handleControlPointDoubleClick = (event: React.MouseEvent, index: number) => {
     event.stopPropagation();
     event.preventDefault();
-    setEdges((eds) =>
-      eds.map((e) => {
-        if (e.id === id) {
-          const canvasEdge = e as CanvasEdge;
-          const currentPoints = [...(canvasEdge.data?.controlPoints || [])];
-          
-          if (connectionType === "curve") {
-            return {
-              ...e,
-              data: {
-                ...e.data,
-                controlPoints: [],
-              },
-            };
-          }
-          
-          currentPoints.splice(index, 1);
-          return {
-            ...e,
-            data: {
-              ...e.data,
-              controlPoints: currentPoints,
-            },
-          };
-        }
-        return e;
-      })
-    );
+
+    const currentEdge = getEdge(id);
+    if (!currentEdge || !onEdgesChange) return;
+
+    const currentPoints = [...(currentEdge.data?.controlPoints || [])];
+    
+    let updatedPoints = currentPoints;
+    if (connectionType === "curve") {
+      updatedPoints = [];
+    } else {
+      updatedPoints.splice(index, 1);
+    }
+
+    const updatedEdge = {
+      ...currentEdge,
+      data: {
+        ...currentEdge.data,
+        controlPoints: updatedPoints,
+      },
+    };
+    onEdgesChange([{ type: "replace", id, item: updatedEdge }]);
   };
 
   return (
@@ -592,9 +571,7 @@ const nodeTypes = {
   canvasNode: CanvasNodeComponent,
 };
 
-const edgeTypes = {
-  canvasEdge: CenterConnectionEdge,
-};
+// edgeTypes is memoized inside LiveblocksCanvas using useMemo to capture onEdgesChange
 
 interface CollaborativeCanvasProps {
   roomId: string;
@@ -656,9 +633,18 @@ function LiveblocksCanvas() {
       edges: { initial: [] },
     });
 
-  const reactFlow = useReactFlow();
+  const reactFlow = useReactFlow<CanvasNode, CanvasEdge>();
   const { zoom } = useViewport();
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const edgeTypes = useMemo(
+    () => ({
+      canvasEdge: (props: EdgeProps<CanvasEdge>) => (
+        <CenterConnectionEdge {...props} onEdgesChange={onEdgesChange} />
+      ),
+    }),
+    [onEdgesChange]
+  );
 
   const [draggedShape, setDraggedShape] = useState<{
     shape: CanvasNodeShape;
@@ -737,22 +723,19 @@ function LiveblocksCanvas() {
 
   const handleUpdateEdge = useCallback(
     (edgeId: string, updates: Partial<CanvasEdgeData>) => {
-      reactFlow.setEdges((eds) =>
-        eds.map((e) => {
-          if (e.id === edgeId) {
-            return {
-              ...e,
-              data: {
-                ...e.data,
-                ...updates,
-              },
-            };
-          }
-          return e;
-        })
-      );
+      const currentEdge = reactFlow.getEdge(edgeId);
+      if (currentEdge && onEdgesChange) {
+        const updatedEdge = {
+          ...currentEdge,
+          data: {
+            ...currentEdge.data,
+            ...updates,
+          },
+        };
+        onEdgesChange([{ type: "replace", id: edgeId, item: updatedEdge }]);
+      }
     },
-    [reactFlow]
+    [reactFlow, onEdgesChange]
   );
 
   const selectedNode = nodes.find((n) => n.selected);
@@ -913,14 +896,19 @@ function LiveblocksCanvas() {
     (event: React.MouseEvent, node: CanvasNode) => {
       if (isConnectingMode && sourceNodeId) {
         if (node.id !== sourceNodeId) {
-          const newEdgeId = crypto.randomUUID();
-          const newEdge: CanvasEdge = {
-            id: newEdgeId,
-            source: sourceNodeId,
-            target: node.id,
-            type: "canvasEdge",
-          };
-          onEdgesChange([{ type: "add", item: newEdge }]);
+          const sourceNodeExists = nodes.some((n) => n.id === sourceNodeId);
+          const targetNodeExists = nodes.some((n) => n.id === node.id);
+          
+          if (sourceNodeExists && targetNodeExists) {
+            const newEdgeId = crypto.randomUUID();
+            const newEdge: CanvasEdge = {
+              id: newEdgeId,
+              source: sourceNodeId,
+              target: node.id,
+              type: "canvasEdge",
+            };
+            onEdgesChange([{ type: "add", item: newEdge }]);
+          }
         }
         setIsConnectingMode(false);
         setSourceNodeId(null);
@@ -928,7 +916,7 @@ function LiveblocksCanvas() {
         setTempLineStart(null);
       }
     },
-    [isConnectingMode, sourceNodeId, onEdgesChange]
+    [isConnectingMode, sourceNodeId, nodes, onEdgesChange]
   );
 
   const handlePaneClick = useCallback(() => {

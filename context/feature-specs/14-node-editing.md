@@ -31,7 +31,7 @@ Add resizing and inline label editing and node node connectivity to canvas nodes
 - don't change shape rendering from the previous unit
 - don't change the shape panel or drag preview
 - don't change how dropped nodes are created
-- keep this focused on resize and label editing only
+- keep this focused on resize, label editing, and basic node-to-node connectivity using straight lines only
 
 ## Check When Done
 

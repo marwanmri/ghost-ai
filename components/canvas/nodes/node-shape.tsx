@@ -38,17 +38,6 @@ export function NodeShape({
         />
       );
     case "circle":
-      return (
-        <div
-          className={`absolute inset-0 rounded-full border transition-all duration-200 ${className}`}
-          style={{
-            ...combinedStyle,
-            backgroundColor,
-            borderColor,
-            borderWidth: strokeWidth,
-          }}
-        />
-      );
     case "pill":
       return (
         <div
