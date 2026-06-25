@@ -653,6 +653,8 @@ function LiveblocksCanvas() {
   const { zoom } = useViewport();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [importedNodeIds, setImportedNodeIds] = useState<string[] | null>(null);
+
   const importTemplate = useMutation(
     ({ storage }, templateNodes: CanvasNode[], templateEdges: CanvasEdge[]) => {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -732,31 +734,48 @@ function LiveblocksCanvas() {
         };
       });
 
+      // Track imported node IDs to select and fit view when they arrive and are measured
+      setImportedNodeIds(newNodes.map((n) => n.id));
+
       // Call mutation to append nodes and edges
       importTemplate(newNodes, newEdges);
-
-      // Short delay to allow React Flow to register and measure the new nodes before selecting and fitting view
-      setTimeout(() => {
-        const newNodeIds = new Set(newNodes.map((n) => n.id));
-        
-        // Select all newly imported nodes and deselect existing ones
-        reactFlow.setNodes((nds) =>
-          nds.map((n) => ({
-            ...n,
-            selected: newNodeIds.has(n.id),
-          }))
-        );
-
-        // Fit view focusing precisely on the newly imported nodes
-        reactFlow.fitView({
-          nodes: newNodes.map((n) => ({ id: n.id })),
-          duration: 300,
-          padding: 0.2,
-        });
-      }, 150);
     },
-    [importTemplate, reactFlow]
+    [importTemplate]
   );
+
+  // React to the arrival and measurement of newly imported template nodes
+  useEffect(() => {
+    if (!importedNodeIds || importedNodeIds.length === 0) return;
+
+    // Check if all imported nodes are present in the current React Flow nodes list and have been measured
+    const allMeasured = importedNodeIds.every((id) => {
+      const node = nodes.find((n) => n.id === id);
+      return node && node.measured && typeof node.measured.width === "number" && typeof node.measured.height === "number";
+    });
+
+    if (allMeasured) {
+      const newNodeIdsSet = new Set(importedNodeIds);
+      
+      // Select all newly imported nodes and deselect existing ones
+      reactFlow.setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          selected: newNodeIdsSet.has(n.id),
+        }))
+      );
+
+      // Fit view focusing precisely on the newly imported nodes
+      reactFlow.fitView({
+        nodes: importedNodeIds.map((id) => ({ id })),
+        duration: 300,
+        padding: 0.2,
+      });
+
+      // Reset tracking state
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImportedNodeIds(null);
+    }
+  }, [importedNodeIds, nodes, reactFlow]);
 
   const undo = useUndo();
   const redo = useRedo();

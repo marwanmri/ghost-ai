@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
+import type { CanvasNode, CanvasEdge } from "@/types/canvas";
 
 interface UseKeyboardShortcutsProps {
-  reactFlow: ReactFlowInstance<any, any>;
+  reactFlow: ReactFlowInstance<CanvasNode, CanvasEdge>;
   undo: () => void;
   redo: () => void;
 }
@@ -31,13 +32,13 @@ export function useKeyboardShortcuts({
       const isMod = event.metaKey || event.ctrlKey;
       const isShift = event.shiftKey;
 
-      // Zoom In: "+" or "="
-      if (event.key === "+" || event.key === "=") {
+      // Zoom In: "+" or "=" (only when modifier key is NOT held to allow native browser zoom)
+      if ((event.key === "+" || event.key === "=") && !isMod) {
         event.preventDefault();
         reactFlow.zoomIn({ duration: 300 });
       }
-      // Zoom Out: "-"
-      else if (event.key === "-") {
+      // Zoom Out: "-" (only when modifier key is NOT held to allow native browser zoom)
+      else if (event.key === "-" && !isMod) {
         event.preventDefault();
         reactFlow.zoomOut({ duration: 300 });
       }

@@ -7,7 +7,13 @@ export async function getCurrentIdentity() {
     return null;
   }
 
-  const user = await currentUser();
+  let user = null;
+  try {
+    user = await currentUser();
+  } catch (error) {
+    console.error("Error fetching current user from Clerk in getCurrentIdentity:", error);
+  }
+
   const primaryEmail = user?.emailAddresses.find((e) => e.id === user.primaryEmailAddressId)?.emailAddress.trim().toLowerCase();
   const emails = user?.emailAddresses.map((e) => e.emailAddress.trim().toLowerCase()) || [];
 

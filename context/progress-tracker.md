@@ -12,6 +12,13 @@ Update this file whenever the current phase, active feature, or implementation s
  
 ## Completed
 
+- Collaborative Canvas Refinements & Bug Fixes:
+  - Wrapped Clerk `currentUser()` API call in `lib/project-access.ts` (`getCurrentIdentity`) in a `try/catch` block to handle transient Clerk network/API errors gracefully without crashing request handlers with 500 errors.
+  - Updated keyboard shortcuts in `hooks/useKeyboardShortcuts.ts` to only intercept `+`, `=`, and `-` zoom keys when the modifier keys (Cmd/Ctrl) are not held down, keeping browser-native zoom functional.
+  - Strongly typed `ReactFlowInstance` inside `hooks/useKeyboardShortcuts.ts` using concrete `CanvasNode` and `CanvasEdge` types to replace the generic `any` types.
+  - Replaced the fragile 150ms timeout delay in the template import viewport focus (`fitView` and node selection) flow with a robust React `useEffect` hook that waits for all imported nodes to be mounted and measured by React Flow.
+  - Removed the debug page `view-images.html` from the workspace.
+
 - Starter System Designs (`18-starter-template.md` & `current-issues.md` refinements):
   - Created `components/editor/starter-templates.ts` to define types and library data for three static layouts (Microservices Architecture, CI/CD Pipeline, Event-Driven System).
   - Created `components/editor/starter-templates-context.tsx` to share modal opening/closing state between `EditorNavbar` and `CollaborativeCanvas`.
