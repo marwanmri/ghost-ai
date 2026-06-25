@@ -20,6 +20,8 @@ import { useProjectActions } from "@/hooks/useProjectActions";
 import { Project } from "@/lib/projects";
 import { ShareDialog } from "@/components/editor/share-dialog";
 
+import { StarterTemplatesProvider } from "@/components/editor/starter-templates-context";
+
 interface EditorShellProps {
   projects: Project[];
   activeProjectId: string | null;
@@ -58,7 +60,8 @@ export function EditorShell({
     : null;
 
   return (
-    <div className="relative h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
+    <StarterTemplatesProvider>
+      <div className="relative h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
       {/* Top Navbar */}
       <EditorNavbar
         isSidebarOpen={sidebarOpen}
@@ -342,5 +345,6 @@ export function EditorShell({
         />
       )}
     </div>
+    </StarterTemplatesProvider>
   );
 }

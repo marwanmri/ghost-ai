@@ -1,11 +1,12 @@
 "use client";
 
 import React from "react";
-import { PanelLeftOpen, PanelLeftClose, Share2, Sparkles } from "lucide-react";
+import { PanelLeftOpen, PanelLeftClose, Share2, Sparkles, LayoutTemplate } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { UserButton } from "@clerk/nextjs";
 import { Project } from "@/lib/projects";
 import { cn } from "@/lib/utils";
+import { useStarterTemplates } from "@/components/editor/starter-templates-context";
 
 interface EditorNavbarProps {
   isSidebarOpen: boolean;
@@ -24,6 +25,7 @@ export function EditorNavbar({
   activeProject,
   onShareClick,
 }: EditorNavbarProps) {
+  const { setIsOpen } = useStarterTemplates();
   return (
     <header className="flex h-14 w-full items-center justify-between border-b border-default bg-surface px-4 select-none shrink-0 z-40">
       {/* Left section: sidebar toggle button */}
@@ -63,6 +65,15 @@ export function EditorNavbar({
       <div className="flex items-center justify-end flex-1 gap-2">
         {activeProject && (
           <>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsOpen(true)}
+              className="hidden md:flex gap-2 rounded-xl border-default hover:bg-subtle text-copy-primary h-8 px-3 transition-colors"
+            >
+              <LayoutTemplate className="h-3.5 w-3.5" />
+              Templates
+            </Button>
             <Button
               variant="outline"
               size="sm"

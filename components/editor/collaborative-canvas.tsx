@@ -1,14 +1,24 @@
 "use client";
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { LiveblocksProvider, RoomProvider } from "@liveblocks/react";
+import {
+  LiveblocksProvider,
+  RoomProvider,
+  useUndo,
+  useRedo,
+  useCanUndo,
+  useCanRedo,
+  useMutation,
+} from "@liveblocks/react";
+import { LiveObject, LiveMap } from "@liveblocks/client";
+import { StarterTemplatesModal } from "./starter-templates-modal";
+import { CanvasTemplate } from "./starter-templates";
 import { ClientSideSuspense } from "@liveblocks/react/suspense";
 import { useLiveblocksFlow } from "@liveblocks/react-flow";
 import {
   Background,
   BackgroundVariant,
   ConnectionMode,
-  MiniMap,
   ReactFlow,
   ReactFlowProvider,
   useReactFlow,
@@ -27,7 +37,13 @@ import {
   Minus,
   Spline,
   Route,
+  ZoomIn,
+  ZoomOut,
+  Maximize,
+  Undo2,
+  Redo2,
 } from "lucide-react";
+import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
 import type { CanvasEdge, CanvasNode, CanvasNodeShape, CanvasEdgeData } from "@/types/canvas";
 import { DEFAULT_NODE_COLOR } from "@/types/canvas";
 import { ShapePanel } from "../canvas/shape-panel";
@@ -637,6 +653,141 @@ function LiveblocksCanvas() {
   const { zoom } = useViewport();
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [importedNodeIds, setImportedNodeIds] = useState<string[] | null>(null);
+
+  const importTemplate = useMutation(
+    ({ storage }, templateNodes: CanvasNode[], templateEdges: CanvasEdge[]) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let flow = (storage as any).get("flow");
+      if (!flow) {
+        flow = new LiveObject({
+          nodes: new LiveMap(),
+          edges: new LiveMap(),
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (storage as any).set("flow", flow);
+      }
+
+      const nodesMap = flow.get("nodes");
+      const edgesMap = flow.get("edges");
+
+      if (nodesMap) {
+        // Clear all existing nodes first
+        for (const key of Array.from(nodesMap.keys())) {
+          nodesMap.delete(key);
+        }
+        for (const node of templateNodes) {
+          const cleanNode = {
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            data: node.data,
+            style: node.style,
+          };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          nodesMap.set(node.id, new LiveObject(cleanNode as any) as any);
+        }
+      }
+
+      if (edgesMap) {
+        // Clear all existing edges first
+        for (const key of Array.from(edgesMap.keys())) {
+          edgesMap.delete(key);
+        }
+        for (const edge of templateEdges) {
+          const cleanEdge = {
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            type: edge.type,
+            data: edge.data,
+          };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          edgesMap.set(edge.id, new LiveObject(cleanEdge as any) as any);
+        }
+      }
+    },
+    []
+  );
+
+  const handleImportTemplate = useCallback(
+    (template: CanvasTemplate) => {
+      // Map old IDs to new unique IDs client-side to prevent collisions and support multiple imports
+      const idMap = new Map<string, string>();
+      
+      const newNodes = template.nodes.map((node) => {
+        const newId = `${node.id}_${crypto.randomUUID().slice(0, 8)}`;
+        idMap.set(node.id, newId);
+        return {
+          ...node,
+          id: newId,
+        };
+      });
+
+      const newEdges = template.edges.map((edge) => {
+        const newId = crypto.randomUUID();
+        return {
+          ...edge,
+          id: newId,
+          source: idMap.get(edge.source) || edge.source,
+          target: idMap.get(edge.target) || edge.target,
+        };
+      });
+
+      // Track imported node IDs to select and fit view when they arrive and are measured
+      setImportedNodeIds(newNodes.map((n) => n.id));
+
+      // Call mutation to append nodes and edges
+      importTemplate(newNodes, newEdges);
+    },
+    [importTemplate]
+  );
+
+  // React to the arrival and measurement of newly imported template nodes
+  useEffect(() => {
+    if (!importedNodeIds || importedNodeIds.length === 0) return;
+
+    // Check if all imported nodes are present in the current React Flow nodes list and have been measured
+    const allMeasured = importedNodeIds.every((id) => {
+      const node = nodes.find((n) => n.id === id);
+      return node && node.measured && typeof node.measured.width === "number" && typeof node.measured.height === "number";
+    });
+
+    if (allMeasured) {
+      const newNodeIdsSet = new Set(importedNodeIds);
+      
+      // Select all newly imported nodes and deselect existing ones
+      reactFlow.setNodes((nds) =>
+        nds.map((n) => ({
+          ...n,
+          selected: newNodeIdsSet.has(n.id),
+        }))
+      );
+
+      // Fit view focusing precisely on the newly imported nodes
+      reactFlow.fitView({
+        nodes: importedNodeIds.map((id) => ({ id })),
+        duration: 300,
+        padding: 0.2,
+      });
+
+      // Reset tracking state
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImportedNodeIds(null);
+    }
+  }, [importedNodeIds, nodes, reactFlow]);
+
+  const undo = useUndo();
+  const redo = useRedo();
+  const canUndo = useCanUndo();
+  const canRedo = useCanRedo();
+
+  useKeyboardShortcuts({
+    reactFlow,
+    undo,
+    redo,
+  });
+
   const edgeTypes = useMemo(
     () => ({
       canvasEdge: (props: EdgeProps<CanvasEdge>) => (
@@ -1026,13 +1177,6 @@ function LiveblocksCanvas() {
         fitView
         className="bg-base"
       >
-        <MiniMap
-          pannable
-          zoomable
-          className="overflow-hidden rounded-xl border border-default bg-surface/90"
-          maskColor="rgba(8, 8, 9, 0.65)"
-          nodeColor="var(--accent-primary)"
-        />
         <Background
           variant={BackgroundVariant.Dots}
           gap={24}
@@ -1048,6 +1192,66 @@ function LiveblocksCanvas() {
         onToggleConnectingMode={handleToggleConnectingMode}
         hasSelectedNode={hasSelectedNode}
       />
+      <StarterTemplatesModal onImport={handleImportTemplate} />
+
+      {/* Canvas Ergonomics Floating Control Bar */}
+      <div className="absolute bottom-20 left-6 flex items-center gap-1.5 rounded-full border border-default/70 bg-surface/90 px-3 py-1.5 shadow-xl shadow-black/20 backdrop-blur-md z-20 select-none">
+        {/* Zoom Controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => reactFlow.zoomOut({ duration: 300 })}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-copy-muted hover:text-brand hover:bg-accent-dim transition-colors"
+            title="Zoom Out (-)"
+          >
+            <ZoomOut className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => reactFlow.fitView({ duration: 300 })}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-copy-muted hover:text-brand hover:bg-accent-dim transition-colors"
+            title="Fit View"
+          >
+            <Maximize className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => reactFlow.zoomIn({ duration: 300 })}
+            className="flex h-8 w-8 items-center justify-center rounded-full text-copy-muted hover:text-brand hover:bg-accent-dim transition-colors"
+            title="Zoom In (+)"
+          >
+            <ZoomIn className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="w-px h-4 bg-default/70 mx-1" />
+
+        {/* History Controls */}
+        <div className="flex items-center gap-1">
+          <button
+            onClick={undo}
+            disabled={!canUndo}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              canUndo
+                ? "text-copy-muted hover:text-brand hover:bg-accent-dim cursor-pointer"
+                : "text-faint cursor-not-allowed opacity-40"
+            }`}
+            title="Undo (Cmd/Ctrl + Z)"
+          >
+            <Undo2 className="h-4 w-4" />
+          </button>
+          <button
+            onClick={redo}
+            disabled={!canRedo}
+            className={`flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+              canRedo
+                ? "text-copy-muted hover:text-brand hover:bg-accent-dim cursor-pointer"
+                : "text-faint cursor-not-allowed opacity-40"
+            }`}
+            title="Redo (Cmd/Ctrl + Shift + Z / Cmd/Ctrl + Y)"
+          >
+            <Redo2 className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
 
       {/* Temporary dashed line showing connection being drawn */}
       {isConnectingMode && tempLineStart && mousePosition && (
