@@ -8,10 +8,19 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Goal
  
-- Implement a curated library of starter system design templates (e.g. monolith, microservices, serverless, event-driven) and the importing mechanism to load them into the collaborative canvas in real-time.
+- Implement AI architecture generation from prompts using a durable background task (Trigger.dev integration).
  
 ## Completed
 
+- Starter System Designs (`18-starter-template.md` & `current-issues.md` refinements):
+  - Created `components/editor/starter-templates.ts` to define types and library data for three static layouts (Microservices Architecture, CI/CD Pipeline, Event-Driven System).
+  - Created `components/editor/starter-templates-context.tsx` to share modal opening/closing state between `EditorNavbar` and `CollaborativeCanvas`.
+  - Refactored `components/editor/starter-templates-modal.tsx` to expand the modal width (`max-w-5xl w-full`) preventing squishing. Re-ordered the card layouts to place the template diagram preview at the top of the cards above titles and descriptions (eliminating description text truncation). Set header title to "Import Template" and removed sparkles.
+  - Modified `components/editor/editor-shell.tsx` to wrap the editor in the starter templates context provider.
+  - Modified `components/editor/editor-navbar.tsx` to add a new "Templates" button next to "Share" / "AI" controls when a project is active.
+  - Modified `components/editor/collaborative-canvas.tsx` to render the templates modal and implemented `importTemplate` Liveblocks mutation to append the new nodes and edges maps into existing storage.
+  - Refactored `handleImportTemplate` in `collaborative-canvas.tsx` to map node and edge IDs to unique values client-side to prevent ID collisions, select all newly imported nodes on load, and fit the React Flow viewport specifically around the imported group.
+  - Verified compilation and strict lint checks across all added/modified components.
 - Boilerplate cleanup (globals.css, public directory SVGs, page.tsx layout).
 - Design system and UI primitive components implementation (`01-design-system.md`).
 - Base Editor Chrome & Sidebar Layout (`02-editor.md`):
@@ -131,6 +140,14 @@ Update this file whenever the current phase, active feature, or implementation s
   - Scaled connection line arrowheads markers sizes from 5 to 7.
   - Refactored `CenterConnectionEdge` to support adjustable curve curvature by dragging the curve body and editing handles.
   - Verified compilation and lint check passes successfully.
+- Canvas Ergonomics (`17-canvas-ergonomics.md`):
+  - Created `hooks/useKeyboardShortcuts.ts` to handle zooming and undo/redo keyboard shortcuts, ignoring events when inputs/textareas are focused.
+  - Custom-styled and implemented a floating, pill-shaped control bar at the bottom-left of the canvas.
+  - Integrated Zoom Out, Fit View, and Zoom In buttons with smooth animated transition options.
+  - Wired Undo and Redo actions directly to Liveblocks room history state hooks, with visual disabled/dimmed styling.
+  - Configured control bar styling with `z-20` to place it underneath the projects sidebar (`z-30`) when opened.
+  - Removed the canvas minimap from the bottom-right corner.
+  - Successfully verified execution end-to-end with unit builds and manual browser interaction.
 
 ## In Progress
 
@@ -138,7 +155,7 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Next Up
 
-- Node Selection & Mutability (or Next Feature)
+- AI Architecture Generation (Trigger.dev workflows)
 
 ## Open Questions
 
@@ -179,3 +196,24 @@ Update this file whenever the current phase, active feature, or implementation s
   - Swapped text buttons with inline SVG visual style lines and Lucide React icons (`Ban`, `ArrowRight`, `ArrowLeft`, `ArrowLeftRight`, `Minus`, `Spline`, `Route`).
   - Scaled arrowhead markers to 7px.
   - Engineered adjustable curves supporting custom curve midpoint drag-editing and reset.
+- Fixed template import canvas crash error (`TypeError: nodesMap.clear is not a function`):
+  - Replaced `.clear()` calls on Liveblocks `LiveMap` objects (`nodesMap` and `edgesMap` in `importTemplate` mutation inside `components/editor/collaborative-canvas.tsx`) by converting the keys iterator to an array with `Array.from()` and deleting each key iteratively, since Liveblocks `LiveMap` does not natively support a `.clear()` method.
+- Resolved database SSL warning and optimized Liveblocks authentication endpoint:
+  - Updated `DATABASE_URL` in `.env` and `.env.local` to use `sslmode=verify-full` instead of `sslmode=require` to resolve the `pg-connection-string` security deprecation warning and guarantee consistent libpq SSL behavior.
+  - Modified [route.ts](file:///Users/marvanmiri/Desktop/ghost_ai/app/api/liveblocks-auth/route.ts) to return `{ error: "forbidden", reason: "..." }` instead of general error payloads on unauthorized requests, preventing the Liveblocks client from falling into infinite reconnect-and-log loops.
+  - Wrapped Clerk `currentUser()` API calls in a `try-catch` block inside the auth endpoint to handle network timeouts/rate limits gracefully and return "Anonymous" metadata rather than throwing a 500 error.
+- Resolved database connection timeout error (PrismaClientKnownRequestError):
+  - Identified that the remote Prisma Postgres hostname (`pooled.db.prisma.io:5432`) is unreachable due to network timeouts in the local development environment.
+  - Initialized a local Prisma Postgres dev server via `npx prisma dev --detach`.
+  - Configured `DATABASE_URL` in `.env` and `.env.local` to use the direct local TCP connection string: `postgres://postgres:postgres@localhost:51214/template1?sslmode=disable`.
+  - Synchronized the local database schema using `npx prisma db push`.
+- Fixed Starter Template modal layout, styling, and replacement functionality (`context/current-issues.md`):
+  - Overrode the default `sm:max-w-sm` width constraint with `sm:max-w-5xl` to prevent modal content/columns from being squeezed vertically.
+  - Aligned the title and subtitle to match `proper_templateUI.png`, using a styled `<kbd>⌘Z</kbd>` element for the keyboard shortcut.
+  - Redesigned the template cards to use the recessed `--bg-base` dark color theme (`bg-base`) and structured text layouts (using `font-semibold` titles and `line-clamp-3` descriptions).
+  - Styled import buttons as outlined full-width buttons (`variant="outline"`) displaying a `Download` icon and standard "Import" text.
+  - Updated `importTemplate` mutation in `collaborative-canvas.tsx` to clear existing nodes and edges dynamically before inserting the template's structures, conforming to the requirement that the imported template replaces current canvas elements.
+
+
+
+

@@ -46,7 +46,10 @@ export async function POST(request: Request) {
     const { userId } = await auth();
 
     if (!userId) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "forbidden", reason: "unauthenticated" },
+        { status: 401 }
+      );
     }
 
     const projectId = await readProjectId(request);
@@ -62,15 +65,21 @@ export async function POST(request: Request) {
 
     if (!access.hasAccess) {
       if (access.reason === "unauthenticated") {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        return NextResponse.json(
+          { error: "forbidden", reason: "unauthenticated" },
+          { status: 401 }
+        );
       }
       if (access.reason === "not_found") {
         return NextResponse.json(
-          { error: "Project not found" },
-          { status: 404 },
+          { error: "forbidden", reason: "project_not_found" },
+          { status: 404 }
         );
       }
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      return NextResponse.json(
+        { error: "forbidden", reason: "forbidden" },
+        { status: 403 }
+      );
     }
 
     const liveblocks = getLiveblocksClient();
@@ -141,7 +150,13 @@ export async function POST(request: Request) {
       });
     }
 
-    const user = await currentUser();
+    let user = null;
+    try {
+      user = await currentUser();
+    } catch (e) {
+      console.error("Error fetching current user from Clerk:", e);
+    }
+
     const { status, body } = await liveblocks.identifyUser(
       { userId, groupIds: [] },
       {
