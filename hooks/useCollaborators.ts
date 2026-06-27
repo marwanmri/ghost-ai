@@ -10,6 +10,20 @@ export interface Collaborator {
   createdAt: string;
 }
 
+async function handleResponse(res: Response, defaultErrorMessage: string) {
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || defaultErrorMessage);
+    }
+    return data;
+  }
+  
+  const text = await res.text();
+  throw new Error(`Server returned ${res.status}: ${text.substring(0, 100)}`);
+}
+
 export function useCollaborators(projectId: string | null) {
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -32,11 +46,7 @@ export function useCollaborators(projectId: string | null) {
     setError(null);
     try {
       const res = await fetch(`/api/projects/${projectId}/collaborators`);
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to load collaborators");
-      }
-      const data = await res.json();
+      const data = await handleResponse(res, "Failed to load collaborators");
       setCollaborators(data);
     } catch (err: unknown) {
       if (err instanceof Error) {
@@ -50,6 +60,7 @@ export function useCollaborators(projectId: string | null) {
   }, [projectId]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchCollaborators();
   }, [fetchCollaborators]);
 
@@ -63,10 +74,7 @@ export function useCollaborators(projectId: string | null) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to invite collaborator");
-      }
+      await handleResponse(res, "Failed to invite collaborator");
       // Reload the list of collaborators to get enriched data from Clerk
       await fetchCollaborators();
       return true;
@@ -92,10 +100,7 @@ export function useCollaborators(projectId: string | null) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to remove collaborator");
-      }
+      await handleResponse(res, "Failed to remove collaborator");
       setCollaborators((prev) => prev.filter((c) => c.id !== id));
       return true;
     } catch (err: unknown) {

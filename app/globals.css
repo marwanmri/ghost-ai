@@ -46,6 +46,10 @@
   --color-accent-ai: var(--accent-ai);
   --color-accent-ai-text: var(--accent-ai-text);
 
+  --color-primary-text: var(--text-primary);
+  --color-muted-text: var(--text-muted);
+  --color-accent-text: var(--accent-ai-text);
+
   --color-state-error: var(--state-error);
   --color-state-success: var(--state-success);
   --color-state-warning: var(--state-warning);
@@ -212,3 +216,4 @@
     @apply font-sans;
   }
 }
+

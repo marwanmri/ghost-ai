@@ -2,19 +2,21 @@
 
 import React, { useState, useCallback, useRef, useEffect, useMemo } from "react";
 import {
-  LiveblocksProvider,
-  RoomProvider,
   useUndo,
   useRedo,
   useCanUndo,
   useCanRedo,
   useMutation,
+  useUpdateMyPresence,
+  useOthersConnectionIds,
+  useOther,
 } from "@liveblocks/react";
 import { LiveObject, LiveMap } from "@liveblocks/client";
 import { StarterTemplatesModal } from "./starter-templates-modal";
 import { CanvasTemplate } from "./starter-templates";
 import { ClientSideSuspense } from "@liveblocks/react/suspense";
 import { useLiveblocksFlow } from "@liveblocks/react-flow";
+import { PresenceAvatars } from "./presence-avatars";
 import {
   Background,
   BackgroundVariant,
@@ -26,6 +28,7 @@ import {
   EdgeProps,
   EdgeLabelRenderer,
   EdgeChange,
+  NodeChange,
 } from "@xyflow/react";
 import {
   AlertTriangle,
@@ -44,6 +47,8 @@ import {
   Redo2,
 } from "lucide-react";
 import { useKeyboardShortcuts } from "@/hooks/useKeyboardShortcuts";
+import { useCanvasAutosave } from "@/hooks/useCanvasAutosave";
+import { useCanvasAutosaveContext } from "@/components/editor/canvas-autosave-context";
 import type { CanvasEdge, CanvasNode, CanvasNodeShape, CanvasEdgeData } from "@/types/canvas";
 import { DEFAULT_NODE_COLOR } from "@/types/canvas";
 import { ShapePanel } from "../canvas/shape-panel";
@@ -624,24 +629,17 @@ export function CollaborativeCanvas({ roomId }: CollaborativeCanvasProps) {
   return (
     <main className="flex-1 relative bg-base overflow-hidden">
       <CanvasErrorBoundary>
-        <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
-          <RoomProvider
-            id={roomId}
-            initialPresence={{ cursor: null, isThinking: false }}
-          >
-            <ClientSideSuspense fallback={<CanvasLoadingState />}>
-              <ReactFlowProvider>
-                <LiveblocksCanvas />
-              </ReactFlowProvider>
-            </ClientSideSuspense>
-          </RoomProvider>
-        </LiveblocksProvider>
+        <ClientSideSuspense fallback={<CanvasLoadingState />}>
+          <ReactFlowProvider>
+            <LiveblocksCanvas projectId={roomId} />
+          </ReactFlowProvider>
+        </ClientSideSuspense>
       </CanvasErrorBoundary>
     </main>
   );
 }
 
-function LiveblocksCanvas() {
+function LiveblocksCanvas({ projectId }: { projectId: string }) {
   const { nodes, edges, onNodesChange, onEdgesChange, onConnect, onDelete } =
     useLiveblocksFlow<CanvasNode, CanvasEdge>({
       suspense: true,
@@ -651,7 +649,148 @@ function LiveblocksCanvas() {
 
   const reactFlow = useReactFlow<CanvasNode, CanvasEdge>();
   const { zoom } = useViewport();
+
+  const autosave = useCanvasAutosaveContext();
+  const setIsDirty = autosave?.setIsDirty;
+
+  const loadCanvasState = useMutation(
+    ({ storage }, loadedNodes: CanvasNode[], loadedEdges: CanvasEdge[]) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let flow = (storage as any).get("flow");
+      if (!flow) {
+        flow = new LiveObject({
+          nodes: new LiveMap(),
+          edges: new LiveMap(),
+        });
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (storage as any).set("flow", flow);
+      }
+
+      const nodesMap = flow.get("nodes");
+      const edgesMap = flow.get("edges");
+
+      if (nodesMap) {
+        for (const key of Array.from(nodesMap.keys())) {
+          nodesMap.delete(key);
+        }
+        for (const node of loadedNodes) {
+          const cleanNode = {
+            id: node.id,
+            type: node.type,
+            position: node.position,
+            data: node.data,
+            style: node.style,
+          };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          nodesMap.set(node.id, new LiveObject(cleanNode as any) as any);
+        }
+      }
+
+      if (edgesMap) {
+        for (const key of Array.from(edgesMap.keys())) {
+          edgesMap.delete(key);
+        }
+        for (const edge of loadedEdges) {
+          const cleanEdge = {
+            id: edge.id,
+            source: edge.source,
+            target: edge.target,
+            type: edge.type,
+            data: edge.data,
+          };
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          edgesMap.set(edge.id, new LiveObject(cleanEdge as any) as any);
+        }
+      }
+    },
+    []
+  );
+
+  useCanvasAutosave({
+    projectId,
+    nodes,
+    edges,
+  });
+
+  const initialLoadRef = useRef(false);
+
+  useEffect(() => {
+    if (initialLoadRef.current) return;
+    
+    // Check if the Liveblocks room is empty
+    if (nodes.length > 0 || edges.length > 0) {
+      initialLoadRef.current = true;
+      return;
+    }
+
+    initialLoadRef.current = true;
+
+    const loadSavedState = async () => {
+      try {
+        const res = await fetch(`/api/projects/${projectId}/canvas`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data && !data.isEmpty && (data.nodes?.length > 0 || data.edges?.length > 0)) {
+            // Re-verify room is still empty before loading
+            if (reactFlow.getNodes().length === 0 && reactFlow.getEdges().length === 0) {
+              loadCanvasState(data.nodes, data.edges);
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Failed to load saved canvas state:", error);
+      }
+    };
+
+    loadSavedState();
+  }, [projectId, nodes.length, edges.length, loadCanvasState, reactFlow]);
+
+  const handleNodesChange = useCallback(
+    (changes: NodeChange<CanvasNode>[]) => {
+      onNodesChange(changes);
+      // Only flag as local changes if it's an actual update like position/dimension edits, not just measurements
+      const hasRealChanges = changes.some(
+        (c) => c.type !== "dimensions" && c.type !== "select",
+      );
+      if (hasRealChanges && setIsDirty) {
+        setIsDirty(true);
+      }
+    },
+    [onNodesChange, setIsDirty],
+  );
+
+  const handleEdgesChange = useCallback(
+    (changes: EdgeChange<CanvasEdge>[]) => {
+      onEdgesChange(changes);
+      const hasRealChanges = changes.some((c) => c.type !== "select");
+      if (hasRealChanges && setIsDirty) {
+        setIsDirty(true);
+      }
+    },
+    [onEdgesChange, setIsDirty],
+  );
+
+  const handleConnect = useCallback(
+    (connection: Parameters<typeof onConnect>[0]) => {
+      onConnect(connection);
+      if (setIsDirty) {
+        setIsDirty(true);
+      }
+    },
+    [onConnect, setIsDirty],
+  );
+
+  const handleOnDelete = useCallback(
+    (params: Parameters<typeof onDelete>[0]) => {
+      onDelete(params);
+      if (setIsDirty) {
+        setIsDirty(true);
+      }
+    },
+    [onDelete, setIsDirty],
+  );
   const containerRef = useRef<HTMLDivElement>(null);
+  const updatePresence = useUpdateMyPresence();
 
   const [importedNodeIds, setImportedNodeIds] = useState<string[] | null>(null);
 
@@ -737,10 +876,14 @@ function LiveblocksCanvas() {
       // Track imported node IDs to select and fit view when they arrive and are measured
       setImportedNodeIds(newNodes.map((n) => n.id));
 
+      if (setIsDirty) {
+        setIsDirty(true);
+      }
+
       // Call mutation to append nodes and edges
       importTemplate(newNodes, newEdges);
     },
-    [importTemplate]
+    [importTemplate, setIsDirty]
   );
 
   // React to the arrival and measurement of newly imported template nodes
@@ -1012,36 +1155,49 @@ function LiveblocksCanvas() {
 
   const handleMouseMove = useCallback(
     (event: React.MouseEvent) => {
-      if (!isConnectingMode || !sourceNodeId || !containerRef.current) return;
-      const rect = containerRef.current.getBoundingClientRect();
-      
-      // Calculate coordinates for the source node center dynamically in this handler to avoid ref access during rendering
-      const sNode = reactFlow.getNode(sourceNodeId);
-      if (sNode) {
-        const sWidth =
-          sNode.measured?.width ??
-          (typeof sNode.style?.width === "number" ? sNode.style.width : 150);
-        const sHeight =
-          sNode.measured?.height ??
-          (typeof sNode.style?.height === "number" ? sNode.style.height : 100);
+      // 1. Connection line handling
+      if (isConnectingMode && sourceNodeId && containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        
+        // Calculate coordinates for the source node center dynamically in this handler to avoid ref access during rendering
+        const sNode = reactFlow.getNode(sourceNodeId);
+        if (sNode) {
+          const sWidth =
+            sNode.measured?.width ??
+            (typeof sNode.style?.width === "number" ? sNode.style.width : 150);
+          const sHeight =
+            sNode.measured?.height ??
+            (typeof sNode.style?.height === "number" ? sNode.style.height : 100);
 
-        const centerX = sNode.position.x + sWidth / 2;
-        const centerY = sNode.position.y + sHeight / 2;
+          const centerX = sNode.position.x + sWidth / 2;
+          const centerY = sNode.position.y + sHeight / 2;
 
-        const screenPos = reactFlow.flowToScreenPosition({ x: centerX, y: centerY });
-        setTempLineStart({
-          x: screenPos.x - rect.left,
-          y: screenPos.y - rect.top,
+          const screenPos = reactFlow.flowToScreenPosition({ x: centerX, y: centerY });
+          setTempLineStart({
+            x: screenPos.x - rect.left,
+            y: screenPos.y - rect.top,
+          });
+        }
+
+        setMousePosition({
+          x: event.clientX - rect.left,
+          y: event.clientY - rect.top,
         });
       }
 
-      setMousePosition({
-        x: event.clientX - rect.left,
-        y: event.clientY - rect.top,
+      // 2. Broadcast cursor position via Liveblocks presence
+      const flowPos = reactFlow.screenToFlowPosition({
+        x: event.clientX,
+        y: event.clientY,
       });
+      updatePresence({ cursor: flowPos });
     },
-    [isConnectingMode, sourceNodeId, reactFlow]
+    [isConnectingMode, sourceNodeId, reactFlow, updatePresence]
   );
+
+  const handleMouseLeave = useCallback(() => {
+    updatePresence({ cursor: null });
+  }, [updatePresence]);
 
   const handleNodeClick = useCallback(
     (event: React.MouseEvent, node: CanvasNode) => {
@@ -1103,6 +1259,7 @@ function LiveblocksCanvas() {
       }`}
       onDragLeave={onDragLeave}
       onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
     >
       {/* SVG Marker Definitions for Connection Line Arrowheads */}
       <svg style={{ position: "absolute", width: 0, height: 0, pointerEvents: "none" }}>
@@ -1163,10 +1320,10 @@ function LiveblocksCanvas() {
         edges={edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
-        onDelete={onDelete}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={handleEdgesChange}
+        onConnect={handleConnect}
+        onDelete={handleOnDelete}
         onDragOver={onDragOver}
         onDrop={onDrop}
         onNodeClick={handleNodeClick}
@@ -1184,6 +1341,7 @@ function LiveblocksCanvas() {
           color="var(--border-subtle)"
         />
       </ReactFlow>
+      <LiveCursors containerRef={containerRef} />
       <ShapePanel
         onInsertShape={handleInsertShape}
         onDragStart={handleDragStart}
@@ -1193,6 +1351,11 @@ function LiveblocksCanvas() {
         hasSelectedNode={hasSelectedNode}
       />
       <StarterTemplatesModal onImport={handleImportTemplate} />
+
+      {/* Participant Presence Avatars */}
+      <div className="absolute top-4 right-4 z-30">
+        <PresenceAvatars />
+      </div>
 
       {/* Canvas Ergonomics Floating Control Bar */}
       <div className="absolute bottom-20 left-6 flex items-center gap-1.5 rounded-full border border-default/70 bg-surface/90 px-3 py-1.5 shadow-xl shadow-black/20 backdrop-blur-md z-20 select-none">
@@ -1529,6 +1692,75 @@ function EdgeSettingsDialog({
             </button>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function LiveCursors({ containerRef }: { containerRef: React.RefObject<HTMLDivElement | null> }) {
+  const connectionIds = useOthersConnectionIds();
+
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden z-40">
+      {connectionIds.map((connectionId) => (
+        <Cursor key={connectionId} connectionId={connectionId} containerRef={containerRef} />
+      ))}
+    </div>
+  );
+}
+
+function Cursor({ connectionId, containerRef }: { connectionId: number; containerRef: React.RefObject<HTMLDivElement | null> }) {
+  const cursor = useOther(connectionId, (user) => user.presence?.cursor);
+  const info = useOther(connectionId, (user) => user.info);
+  const reactFlow = useReactFlow();
+  // Subscribe to viewport changes so cursor positions are recalculated on zoom/pan
+  useViewport();
+
+  if (!cursor) {
+    return null;
+  }
+
+  // flowToScreenPosition returns screen (client) coordinates.
+  // We need to subtract the container's bounding rect to get
+  // container-relative coordinates for absolute positioning.
+  const screenPos = reactFlow.flowToScreenPosition(cursor);
+  // eslint-disable-next-line react-hooks/refs
+  const containerRect = containerRef.current?.getBoundingClientRect();
+  const x = containerRect ? screenPos.x - containerRect.left : screenPos.x;
+  const y = containerRect ? screenPos.y - containerRect.top : screenPos.y;
+
+  const name = info?.name || "Collaborator";
+  const color = info?.color || "var(--accent-primary)";
+
+  return (
+    <div
+      className="absolute transition-transform duration-75 ease-out pointer-events-none"
+      style={{
+        left: 0,
+        top: 0,
+        transform: `translate3d(${x}px, ${y}px, 0)`,
+      }}
+    >
+      <svg
+        className="h-5 w-5 drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)]"
+        viewBox="0 0 16 16"
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+        style={{ color }}
+      >
+        <path
+          d="M1 1V14.5L5.5 10L9.5 18L12.5 16.5L8.5 9L14 8.5L1 1Z"
+          fill="currentColor"
+          stroke="var(--bg-base)"
+          strokeWidth="1.5"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div
+        style={{ backgroundColor: color }}
+        className="absolute left-4 top-4 rounded px-1.5 py-0.5 text-[10px] font-semibold text-white shadow-md shadow-black/30 whitespace-nowrap"
+      >
+        {name}
       </div>
     </div>
   );

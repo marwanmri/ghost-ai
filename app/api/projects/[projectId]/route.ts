@@ -83,7 +83,7 @@ export async function PATCH(
     return NextResponse.json(updatedProject);
   } catch (error) {
     console.error("Error updating project:", error);
-    const err = error as any;
+    const err = error as { code?: string; meta?: { target?: string | string[] } };
     if (
       err &&
       (err.code === "P2002" ||

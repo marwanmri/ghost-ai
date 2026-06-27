@@ -21,6 +21,8 @@ import { Project } from "@/lib/projects";
 import { ShareDialog } from "@/components/editor/share-dialog";
 
 import { StarterTemplatesProvider } from "@/components/editor/starter-templates-context";
+import { CanvasAutosaveProvider } from "@/components/editor/canvas-autosave-context";
+import { LiveblocksProvider, RoomProvider } from "@liveblocks/react";
 
 interface EditorShellProps {
   projects: Project[];
@@ -59,9 +61,8 @@ export function EditorShell({
     ? projects.find((p) => p.id === activeProjectId) || null
     : null;
 
-  return (
-    <StarterTemplatesProvider>
-      <div className="relative h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
+  const shellLayout = (
+    <div className="relative h-screen flex flex-col bg-base text-copy-primary overflow-hidden font-sans">
       {/* Top Navbar */}
       <EditorNavbar
         isSidebarOpen={sidebarOpen}
@@ -345,6 +346,28 @@ export function EditorShell({
         />
       )}
     </div>
+  );
+
+  if (activeProjectId) {
+    return (
+      <LiveblocksProvider authEndpoint="/api/liveblocks-auth">
+        <RoomProvider
+          id={activeProjectId}
+          initialPresence={{ cursor: null, thinking: false }}
+        >
+          <CanvasAutosaveProvider projectId={activeProjectId}>
+            <StarterTemplatesProvider>
+              {shellLayout}
+            </StarterTemplatesProvider>
+          </CanvasAutosaveProvider>
+        </RoomProvider>
+      </LiveblocksProvider>
+    );
+  }
+
+  return (
+    <StarterTemplatesProvider>
+      {shellLayout}
     </StarterTemplatesProvider>
   );
 }

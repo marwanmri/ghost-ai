@@ -4,6 +4,7 @@ import type { NodeProps } from "@xyflow/react";
 import type { CanvasNode, CanvasNodeColor } from "@/types/canvas";
 import { NodeShape } from "./node-shape";
 import { NODE_COLORS } from "@/types/canvas";
+import { useCanvasAutosaveContext } from "@/components/editor/canvas-autosave-context";
 
 interface ColorSwatchProps {
   color: CanvasNodeColor;
@@ -45,6 +46,8 @@ function ColorSwatch({ color, isActive, onClick }: ColorSwatchProps) {
 export function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNode>) {
   const textColor = data.color.foreground;
   const { setNodes } = useReactFlow();
+  const autosave = useCanvasAutosaveContext();
+  const setIsDirty = autosave?.setIsDirty;
 
   // Label editing state
   const [isEditing, setIsEditing] = useState(false);
@@ -75,6 +78,10 @@ export function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNode
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const newVal = e.target.value;
     setEditValue(newVal);
+
+    if (setIsDirty) {
+      setIsDirty(true);
+    }
 
     // Update in-memory and collaborative React Flow/Liveblocks store
     setNodes((prevNodes) =>
@@ -141,6 +148,9 @@ export function CanvasNodeComponent({ id, data, selected }: NodeProps<CanvasNode
                 color={swatch}
                 isActive={isActive}
                 onClick={() => {
+                  if (setIsDirty) {
+                    setIsDirty(true);
+                  }
                   setNodes((prevNodes) =>
                     prevNodes.map((n) => {
                       if (n.id === id) {
