@@ -12,12 +12,22 @@ Update this file whenever the current phase, active feature, or implementation s
  
 ## Completed
 
+- Code Review & Invariant Fixes:
+  - Addressed Supabase bucket check caching and resilient GET fallbacks.
+  - Implemented request serialization in custom canvas autosave hooks.
+  - Resolved UI event guards (Enter message send guards, IME composition check) and state defaults in AI Sidebar.
+  - Integrated full dirty tracking paths for local canvas modifications.
+  - Updated save status indicator to render dirty/unsaved states correctly.
+  - Implemented unmount guards, non-JSON OK responses, and clean error fallbacks in collaborator loading.
+  - Converted progress-tracker context files absolute local links to repository-relative links.
+  - Verified lint checks and production builds compile successfully.
+
 - Collaborative Canvas Autosave & Loading (Feature Spec `21-canvas-autosave.md`):
   - Installed `@supabase/supabase-js` and `@supabase/ssr` dependencies.
-  - Implemented client utility [supabase.ts](file:///Users/marvanmiri/Desktop/ghost_ai/lib/supabase.ts) for clean backend connection.
+  - Implemented client utility [supabase.ts](lib/supabase.ts) for clean backend connection.
   - Created project canvas storage endpoints `PUT` and `GET /api/projects/[projectId]/canvas` using Supabase Storage buckets and Prisma metadata `canvasJsonPath`.
-  - Created [canvas-autosave-context.tsx](file:///Users/marvanmiri/Desktop/ghost_ai/components/editor/canvas-autosave-context.tsx) to manage status and manual triggers.
-  - Implemented debounced and manual autosaving custom hook [useCanvasAutosave.ts](file:///Users/marvanmiri/Desktop/ghost_ai/hooks/useCanvasAutosave.ts).
+  - Created [canvas-autosave-context.tsx](components/editor/canvas-autosave-context.tsx) to manage status and manual triggers.
+  - Implemented debounced and manual autosaving custom hook [useCanvasAutosave.ts](hooks/useCanvasAutosave.ts).
   - Integrated interactive navbar save status button with saving (spinner), saved (green cloud), save (neutral cloud), and error (alert) states.
   - Integrated state loading on mount if room is empty and verification checks.
 
@@ -30,8 +40,8 @@ Update this file whenever the current phase, active feature, or implementation s
   - Resolved all pre-existing typescript-eslint and React compilation errors across the workspace, ensuring `npm run build` and `npm run lint` compile cleanly.
 
 - Share Dialog JSON Parsing Fix:
-  - Created a robust response validation helper in the client hook [useCollaborators.ts](file:///Users/marvanmiri/Desktop/ghost_ai/hooks/useCollaborators.ts) that verifies the HTTP response's Content-Type before trying to parse the body as JSON. This prevents page crashes and cryptic JSON parsing errors (like 'Unexpected token <') when the server returns HTML (such as a 404 or redirect page) instead of JSON.
-  - Cleaned up the temporary `x-bypass-auth` headers and debug log parameters inside the route protection middleware [proxy.ts](file:///Users/marvanmiri/Desktop/ghost_ai/proxy.ts) to keep the security boundary clean and production-ready.
+  - Created a robust response validation helper in the client hook [useCollaborators.ts](hooks/useCollaborators.ts) that verifies the HTTP response's Content-Type before trying to parse the body as JSON. This prevents page crashes and cryptic JSON parsing errors (like 'Unexpected token <') when the server returns HTML (such as a 404 or redirect page) instead of JSON.
+  - Cleaned up the temporary `x-bypass-auth` headers and debug log parameters inside the route protection middleware [proxy.ts](proxy.ts) to keep the security boundary clean and production-ready.
 
 - Collaborative Canvas Presence (Avatars & Cursors):
   - Moved Liveblocks room provider context configuration to `components/editor/editor-shell.tsx` client-component wrapper to allow the navbar to render collaborator presence stacks within active rooms without crashing hook execution or duplicating user controls.
@@ -91,7 +101,7 @@ Update this file whenever the current phase, active feature, or implementation s
     - Integrated Lucide icons (`FolderKanban` and `Share2`) into the tabs with smooth color transition animations.
     - Styled the active tab with an elevated background (`bg-subtle`), subtle borders, custom drop-shadow, and highlighted the icon with the brand's cyan accent color (`text-brand`).
     - Fixed triggers alignment and vertical padding overflow by defining a fixed height (`h-9`) on the `TabsList` container and making the triggers fill it cleanly (`h-full`).
-  - Added `suppressHydrationWarning` to the `<html>` element in root `RootLayout` ([layout.tsx](file:///Users/marvanmiri/Desktop/ghost_ai/app/layout.tsx)) to resolve hydration mismatch warnings caused by browser extensions (e.g. Grammarly adding custom data attributes to the `<body>` element).
+  - Added `suppressHydrationWarning` to the `<html>` element in root `RootLayout` ([layout.tsx](app/layout.tsx)) to resolve hydration mismatch warnings caused by browser extensions (e.g. Grammarly adding custom data attributes to the `<body>` element).
   - Prisma Database Integration & Models Setup (`05-prisma.md`):
     - Defined `Project` and `ProjectCollaborator` relational schema with cascade deletes, custom indexes, and status enums in `prisma/models/project.prisma`.
     - Created `lib/prisma.ts` as a cached singleton, configuring dynamic resolution of the datasource between Accelerate (`prisma+postgres://` / `prisma+postgress://`) and direct SQL adapter connection using `@prisma/adapter-pg` and `pg.Pool`.
@@ -242,7 +252,7 @@ Update this file whenever the current phase, active feature, or implementation s
   - Replaced `.clear()` calls on Liveblocks `LiveMap` objects (`nodesMap` and `edgesMap` in `importTemplate` mutation inside `components/editor/collaborative-canvas.tsx`) by converting the keys iterator to an array with `Array.from()` and deleting each key iteratively, since Liveblocks `LiveMap` does not natively support a `.clear()` method.
 - Resolved database SSL warning and optimized Liveblocks authentication endpoint:
   - Updated `DATABASE_URL` in `.env` and `.env.local` to use `sslmode=verify-full` instead of `sslmode=require` to resolve the `pg-connection-string` security deprecation warning and guarantee consistent libpq SSL behavior.
-  - Modified [route.ts](file:///Users/marvanmiri/Desktop/ghost_ai/app/api/liveblocks-auth/route.ts) to return `{ error: "forbidden", reason: "..." }` instead of general error payloads on unauthorized requests, preventing the Liveblocks client from falling into infinite reconnect-and-log loops.
+  - Modified [route.ts](app/api/liveblocks-auth/route.ts) to return `{ error: "forbidden", reason: "..." }` instead of general error payloads on unauthorized requests, preventing the Liveblocks client from falling into infinite reconnect-and-log loops.
   - Wrapped Clerk `currentUser()` API calls in a `try-catch` block inside the auth endpoint to handle network timeouts/rate limits gracefully and return "Anonymous" metadata rather than throwing a 500 error.
 - Resolved database connection timeout error (PrismaClientKnownRequestError):
   - Identified that the remote Prisma Postgres hostname (`pooled.db.prisma.io:5432`) is unreachable due to network timeouts in the local development environment.

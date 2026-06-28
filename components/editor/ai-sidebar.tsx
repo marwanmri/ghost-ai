@@ -24,7 +24,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [isGeneratingSpec, setIsGeneratingSpec] = useState<boolean>(false);
-  const [specGenerated, setSpecGenerated] = useState<boolean>(true); // default to true to show demo card
+  const [specGenerated, setSpecGenerated] = useState<boolean>(false);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -54,7 +54,7 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
 
   const handleSendMessage = useCallback((textToSend?: string) => {
     const text = textToSend || inputText;
-    if (!text.trim()) return;
+    if (!text.trim() || isTyping) return;
 
     // Clear input and reset textarea height if sending from textarea
     if (!textToSend) {
@@ -103,10 +103,10 @@ export function AiSidebar({ isOpen, onClose }: AiSidebarProps) {
       setMessages((prev) => [...prev, newAssistantMessage]);
       setIsTyping(false);
     }, 1000);
-  }, [inputText]);
+  }, [inputText, isTyping]);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
       e.preventDefault();
       handleSendMessage();
     }

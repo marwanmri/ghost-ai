@@ -34,6 +34,9 @@ export async function PATCH(
       const body = await request.json();
       if (body.name && typeof body.name === "string" && body.name.trim()) {
         name = body.name.trim();
+        if (name.length > 100) {
+          name = name.substring(0, 100);
+        }
       }
     } catch {
       return NextResponse.json(

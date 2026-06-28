@@ -29,6 +29,7 @@ export function EditorNavbar({
   const { setIsOpen } = useStarterTemplates();
   const autosave = useCanvasAutosaveContext();
   const status = autosave?.status ?? "idle";
+  const isDirty = autosave?.isDirty ?? false;
   const triggerManualSave = autosave?.triggerManualSave ?? null;
 
   const handleSaveClick = async () => {
@@ -104,8 +105,8 @@ export function EditorNavbar({
                 </>
               ) : (
                 <>
-                  <Cloud className={cn("h-3.5 w-3.5", status === "saved" ? "text-state-success" : "text-copy-muted")} />
-                  <span>{status === "saved" ? "Saved" : "Save"}</span>
+                  <Cloud className={cn("h-3.5 w-3.5", (status === "saved" && !isDirty) ? "text-state-success" : "text-copy-muted")} />
+                  <span>{(status === "saved" && !isDirty) ? "Saved" : "Save"}</span>
                 </>
               )}
             </Button>

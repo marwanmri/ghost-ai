@@ -62,6 +62,9 @@ export async function POST(request: Request) {
       const body = await request.json();
       if (body.name && typeof body.name === "string" && body.name.trim()) {
         name = body.name.trim();
+        if (name.length > 100) {
+          name = name.substring(0, 100);
+        }
       }
       if (body.description && typeof body.description === "string") {
         description = body.description.trim();

@@ -934,10 +934,10 @@ function LiveblocksCanvas({ projectId }: { projectId: string }) {
   const edgeTypes = useMemo(
     () => ({
       canvasEdge: (props: EdgeProps<CanvasEdge>) => (
-        <CenterConnectionEdge {...props} onEdgesChange={onEdgesChange} />
+        <CenterConnectionEdge {...props} onEdgesChange={handleEdgesChange} />
       ),
     }),
-    [onEdgesChange]
+    [handleEdgesChange]
   );
 
   const [draggedShape, setDraggedShape] = useState<{
@@ -1027,9 +1027,12 @@ function LiveblocksCanvas({ projectId }: { projectId: string }) {
           },
         };
         onEdgesChange([{ type: "replace", id: edgeId, item: updatedEdge }]);
+        if (setIsDirty) {
+          setIsDirty(true);
+        }
       }
     },
-    [reactFlow, onEdgesChange]
+    [reactFlow, onEdgesChange, setIsDirty]
   );
 
   const selectedNode = nodes.find((n) => n.selected);
@@ -1084,8 +1087,11 @@ function LiveblocksCanvas({ projectId }: { projectId: string }) {
         },
       };
       onNodesChange([{ type: "add", item: newNode }]);
+      if (setIsDirty) {
+        setIsDirty(true);
+      }
     },
-    [onNodesChange]
+    [onNodesChange, setIsDirty]
   );
 
   const onDrop = useCallback(
@@ -1215,6 +1221,9 @@ function LiveblocksCanvas({ projectId }: { projectId: string }) {
               type: "canvasEdge",
             };
             onEdgesChange([{ type: "add", item: newEdge }]);
+            if (setIsDirty) {
+              setIsDirty(true);
+            }
           }
         }
         setIsConnectingMode(false);
@@ -1223,7 +1232,7 @@ function LiveblocksCanvas({ projectId }: { projectId: string }) {
         setTempLineStart(null);
       }
     },
-    [isConnectingMode, sourceNodeId, nodes, onEdgesChange]
+    [isConnectingMode, sourceNodeId, nodes, onEdgesChange, setIsDirty]
   );
 
   const handlePaneClick = useCallback(() => {

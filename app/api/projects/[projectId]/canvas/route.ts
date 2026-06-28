@@ -3,6 +3,28 @@ import { checkProjectAccess } from "@/lib/project-access";
 import { supabaseAdmin } from "@/lib/supabase";
 import { prisma } from "@/lib/prisma";
 
+let isCanvasesBucketVerified = false;
+
+async function ensureCanvasesBucket() {
+  if (isCanvasesBucketVerified) return;
+  try {
+    const { data: bucketData, error: bucketError } = await supabaseAdmin.storage.getBucket("canvases");
+    if (bucketError || !bucketData) {
+      const { error: createError } = await supabaseAdmin.storage.createBucket("canvases", {
+        public: false,
+        allowedMimeTypes: ["application/json"],
+      });
+      if (createError) {
+        console.error("Failed to create canvases bucket:", createError);
+        return;
+      }
+    }
+    isCanvasesBucketVerified = true;
+  } catch (bucketErr) {
+    console.error("Error checking/creating bucket:", bucketErr);
+  }
+}
+
 export async function PUT(
   request: Request,
   { params }: { params: Promise<{ projectId: string }> },
@@ -38,20 +60,7 @@ export async function PUT(
     }
 
     // Ensure the canvases bucket exists in Supabase Storage
-    try {
-      const { data: bucketData, error: bucketError } = await supabaseAdmin.storage.getBucket("canvases");
-      if (bucketError || !bucketData) {
-        const { error: createError } = await supabaseAdmin.storage.createBucket("canvases", {
-          public: false,
-          allowedMimeTypes: ["application/json"],
-        });
-        if (createError) {
-          console.error("Failed to create canvases bucket:", createError);
-        }
-      }
-    } catch (bucketErr) {
-      console.error("Error checking/creating bucket:", bucketErr);
-    }
+    await ensureCanvasesBucket();
 
     // Upload the canvas JSON to Supabase Storage
     const storagePath = `projects/${projectId}/canvas.json`;
@@ -100,21 +109,29 @@ export async function GET(
       );
     }
 
-    // Read the project's saved storage path from Prisma
-    const storagePath = access.project.canvasJsonPath;
-    if (!storagePath) {
-      return NextResponse.json({ nodes: [], edges: [], isEmpty: true });
-    }
+    // Read the project's saved storage path from Prisma or fallback to deterministic path
+    const storagePath = access.project.canvasJsonPath || `projects/${projectId}/canvas.json`;
 
     // Fetch the saved canvas JSON from Supabase Storage
     const { data, error: downloadError } = await supabaseAdmin.storage
       .from("canvases")
       .download(storagePath);
 
-    if (downloadError || !data) {
+    if (downloadError) {
       console.error("Failed to download canvas from Supabase Storage:", downloadError);
-      // Fallback: if record exists but storage is missing, return empty canvas cleanly
-      return NextResponse.json({ nodes: [], edges: [], isEmpty: true });
+      // Only fallback for not found (status 404 or message includes Object not found)
+      const isNotFound =
+        downloadError.status === 404 ||
+        downloadError.message?.toLowerCase().includes("not found") ||
+        downloadError.message?.toLowerCase().includes("nosuchkey");
+      if (isNotFound) {
+        return NextResponse.json({ nodes: [], edges: [], isEmpty: true });
+      }
+      return NextResponse.json({ error: "Failed to download canvas from storage" }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ error: "No data returned from storage" }, { status: 500 });
     }
 
     try {
@@ -130,3 +147,4 @@ export async function GET(
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
+

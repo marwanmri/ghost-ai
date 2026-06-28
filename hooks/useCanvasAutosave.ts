@@ -20,6 +20,7 @@ export function useCanvasAutosave({
   const setIsDirty = autosave?.setIsDirty;
 
   const latestDataRef = useRef({ nodes, edges });
+  const lastSaveIdRef = useRef<number>(0);
 
   // Update latest data ref on every change
   useEffect(() => {
@@ -31,6 +32,7 @@ export function useCanvasAutosave({
     if ((!isDirty && !force) || !setStatus || !setIsDirty) return;
 
     setStatus("saving");
+    const currentSaveId = ++lastSaveIdRef.current;
     try {
       const data = latestDataRef.current;
       const res = await fetch(`/api/projects/${projectId}/canvas`, {
@@ -45,12 +47,16 @@ export function useCanvasAutosave({
         throw new Error(`Failed to save canvas: ${res.statusText}`);
       }
 
-      // Reset local changes flag and transition to saved
-      setIsDirty(false);
-      setStatus("saved");
+      // Reset local changes flag and transition to saved only if it's the latest save
+      if (currentSaveId === lastSaveIdRef.current) {
+        setIsDirty(false);
+        setStatus("saved");
+      }
     } catch (error) {
       console.error("Autosave error:", error);
-      setStatus("error");
+      if (currentSaveId === lastSaveIdRef.current) {
+        setStatus("error");
+      }
     }
   }, [projectId, setStatus, isDirty, setIsDirty]);
 
