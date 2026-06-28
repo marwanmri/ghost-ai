@@ -12,6 +12,45 @@ Update this file whenever the current phase, active feature, or implementation s
  
 ## Completed
 
+- Code Review & Invariant Fixes:
+  - Addressed Supabase bucket check caching and resilient GET fallbacks.
+  - Implemented request serialization in custom canvas autosave hooks.
+  - Resolved UI event guards (Enter message send guards, IME composition check) and state defaults in AI Sidebar.
+  - Integrated full dirty tracking paths for local canvas modifications.
+  - Updated save status indicator to render dirty/unsaved states correctly.
+  - Implemented unmount guards, non-JSON OK responses, and clean error fallbacks in collaborator loading.
+  - Converted progress-tracker context files absolute local links to repository-relative links.
+  - Verified lint checks and production builds compile successfully.
+
+- Collaborative Canvas Autosave & Loading (Feature Spec `21-canvas-autosave.md`):
+  - Installed `@supabase/supabase-js` and `@supabase/ssr` dependencies.
+  - Implemented client utility [supabase.ts](lib/supabase.ts) for clean backend connection.
+  - Created project canvas storage endpoints `PUT` and `GET /api/projects/[projectId]/canvas` using Supabase Storage buckets and Prisma metadata `canvasJsonPath`.
+  - Created [canvas-autosave-context.tsx](components/editor/canvas-autosave-context.tsx) to manage status and manual triggers.
+  - Implemented debounced and manual autosaving custom hook [useCanvasAutosave.ts](hooks/useCanvasAutosave.ts).
+  - Integrated interactive navbar save status button with saving (spinner), saved (green cloud), save (neutral cloud), and error (alert) states.
+  - Integrated state loading on mount if room is empty and verification checks.
+
+- AI Workspace Sidebar Shell (Feature Spec `20-ai-sidebar-shell.md`):
+  - Refactored the `AiSidebar` component into a standalone shell with a Bot-focused header.
+  - Implemented shadcn `Tabs` with AI Architect and Specs channels.
+  - Designed an interactive AI Architect tab with auto-growing textarea input, starter chips, scrollable chat layout, and a client-side mock response simulator.
+  - Designed a Specs tab with canvas-analysis trigger button and a static Markdown specification preview card.
+  - Added new Tailwind color tokens `text-primary-text`, `text-muted-text`, `text-accent-text`, and customized `--accent` and `--accent-foreground` inside a localized `.theme-ai` scope to ensure the workspace conforms perfectly to design specifications.
+  - Resolved all pre-existing typescript-eslint and React compilation errors across the workspace, ensuring `npm run build` and `npm run lint` compile cleanly.
+
+- Share Dialog JSON Parsing Fix:
+  - Created a robust response validation helper in the client hook [useCollaborators.ts](hooks/useCollaborators.ts) that verifies the HTTP response's Content-Type before trying to parse the body as JSON. This prevents page crashes and cryptic JSON parsing errors (like 'Unexpected token <') when the server returns HTML (such as a 404 or redirect page) instead of JSON.
+  - Cleaned up the temporary `x-bypass-auth` headers and debug log parameters inside the route protection middleware [proxy.ts](proxy.ts) to keep the security boundary clean and production-ready.
+
+- Collaborative Canvas Presence (Avatars & Cursors):
+  - Moved Liveblocks room provider context configuration to `components/editor/editor-shell.tsx` client-component wrapper to allow the navbar to render collaborator presence stacks within active rooms without crashing hook execution or duplicating user controls.
+  - Modified standard presence types in `liveblocks.config.ts` to replace `isThinking` with `thinking: boolean` per spec.
+  - Implemented the modular presence avatar component `components/editor/presence-avatars.tsx` using Liveblocks `useOthers` and Clerk identity `useUser` to filter out the current user and render overlapping avatars up to 5 with profile pictures, initials fallback, dynamic boundary cursor colors, and +N overflow indicator chips.
+  - Positioned presence indicators directly in `components/editor/editor-navbar.tsx` next to the Clerk `<UserButton />`, incorporating a vertical divider that conditionally renders only when there are active collaborators.
+  - Enabled realtime cursor broadcasting in `components/editor/collaborative-canvas.tsx` by capturing mouse pointer moves on the React Flow wrapper container, mapping screen coordinates to flow-coordinates, and clearing cursor position to `null` on mouse leave.
+  - Engineered performance-optimized `<LiveCursors />` and `<Cursor />` overlay components using `@liveblocks/react` connection IDs mapping, styled with colored pointers and name badges attached, and subscribed to the react-flow viewport changes using `useViewport()` to ensure smooth positioning tracking during pans and zooms.
+
 - Collaborative Canvas Refinements & Bug Fixes:
   - Wrapped Clerk `currentUser()` API call in `lib/project-access.ts` (`getCurrentIdentity`) in a `try/catch` block to handle transient Clerk network/API errors gracefully without crashing request handlers with 500 errors.
   - Updated keyboard shortcuts in `hooks/useKeyboardShortcuts.ts` to only intercept `+`, `=`, and `-` zoom keys when the modifier keys (Cmd/Ctrl) are not held down, keeping browser-native zoom functional.
@@ -62,7 +101,7 @@ Update this file whenever the current phase, active feature, or implementation s
     - Integrated Lucide icons (`FolderKanban` and `Share2`) into the tabs with smooth color transition animations.
     - Styled the active tab with an elevated background (`bg-subtle`), subtle borders, custom drop-shadow, and highlighted the icon with the brand's cyan accent color (`text-brand`).
     - Fixed triggers alignment and vertical padding overflow by defining a fixed height (`h-9`) on the `TabsList` container and making the triggers fill it cleanly (`h-full`).
-  - Added `suppressHydrationWarning` to the `<html>` element in root `RootLayout` ([layout.tsx](file:///Users/marvanmiri/Desktop/ghost_ai/app/layout.tsx)) to resolve hydration mismatch warnings caused by browser extensions (e.g. Grammarly adding custom data attributes to the `<body>` element).
+  - Added `suppressHydrationWarning` to the `<html>` element in root `RootLayout` ([layout.tsx](app/layout.tsx)) to resolve hydration mismatch warnings caused by browser extensions (e.g. Grammarly adding custom data attributes to the `<body>` element).
   - Prisma Database Integration & Models Setup (`05-prisma.md`):
     - Defined `Project` and `ProjectCollaborator` relational schema with cascade deletes, custom indexes, and status enums in `prisma/models/project.prisma`.
     - Created `lib/prisma.ts` as a cached singleton, configuring dynamic resolution of the datasource between Accelerate (`prisma+postgres://` / `prisma+postgress://`) and direct SQL adapter connection using `@prisma/adapter-pg` and `pg.Pool`.
@@ -160,6 +199,12 @@ Update this file whenever the current phase, active feature, or implementation s
 
 - None.
 
+- Presence Avatars & Live Cursors Fix (Feature Spec `19-presence-avatars-cursor.md`):
+  - Restored the Clerk `<UserButton />` to `editor-navbar.tsx` so it always renders in the navbar regardless of whether a project is active, matching the user's requirement.
+  - Simplified `presence-avatars.tsx` to render only collaborator avatars (no `UserButton`); returns `null` when no collaborators are present.
+  - Fixed live cursor visibility: moved `<LiveCursors />` from inside `<ReactFlow>` to a sibling overlay div in `collaborative-canvas.tsx`. The `Cursor` component now uses `containerRef.getBoundingClientRect()` to convert `flowToScreenPosition()` screen coordinates into container-relative coordinates for correct absolute positioning.
+  - Verified `npm run build` passes successfully.
+
 ## Next Up
 
 - AI Architecture Generation (Trigger.dev workflows)
@@ -207,7 +252,7 @@ Update this file whenever the current phase, active feature, or implementation s
   - Replaced `.clear()` calls on Liveblocks `LiveMap` objects (`nodesMap` and `edgesMap` in `importTemplate` mutation inside `components/editor/collaborative-canvas.tsx`) by converting the keys iterator to an array with `Array.from()` and deleting each key iteratively, since Liveblocks `LiveMap` does not natively support a `.clear()` method.
 - Resolved database SSL warning and optimized Liveblocks authentication endpoint:
   - Updated `DATABASE_URL` in `.env` and `.env.local` to use `sslmode=verify-full` instead of `sslmode=require` to resolve the `pg-connection-string` security deprecation warning and guarantee consistent libpq SSL behavior.
-  - Modified [route.ts](file:///Users/marvanmiri/Desktop/ghost_ai/app/api/liveblocks-auth/route.ts) to return `{ error: "forbidden", reason: "..." }` instead of general error payloads on unauthorized requests, preventing the Liveblocks client from falling into infinite reconnect-and-log loops.
+  - Modified [route.ts](app/api/liveblocks-auth/route.ts) to return `{ error: "forbidden", reason: "..." }` instead of general error payloads on unauthorized requests, preventing the Liveblocks client from falling into infinite reconnect-and-log loops.
   - Wrapped Clerk `currentUser()` API calls in a `try-catch` block inside the auth endpoint to handle network timeouts/rate limits gracefully and return "Anonymous" metadata rather than throwing a 500 error.
 - Resolved database connection timeout error (PrismaClientKnownRequestError):
   - Identified that the remote Prisma Postgres hostname (`pooled.db.prisma.io:5432`) is unreachable due to network timeouts in the local development environment.

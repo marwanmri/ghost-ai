@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useCollaborators, Collaborator } from "@/hooks/useCollaborators";
+import { useCollaborators } from "@/hooks/useCollaborators";
 import {
   Link as LinkIcon,
   Check,

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 export interface Collaborator {
   id: string;
@@ -8,6 +8,25 @@ export interface Collaborator {
   avatar: string | null;
   isOwner: boolean;
   createdAt: string;
+}
+
+async function handleResponse(res: Response, defaultErrorMessage: string) {
+  const contentType = res.headers.get("content-type");
+  if (contentType && contentType.includes("application/json")) {
+    const data = await res.json();
+    if (!res.ok) {
+      throw new Error(data.error || defaultErrorMessage);
+    }
+    return data;
+  }
+  
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`Server returned ${res.status}: ${text.substring(0, 100)}`);
+  }
+  
+  const text = await res.text();
+  return text;
 }
 
 export function useCollaborators(projectId: string | null) {
@@ -21,92 +40,106 @@ export function useCollaborators(projectId: string | null) {
   const [removingId, setRemovingId] = useState<string | null>(null);
   const [removeError, setRemoveError] = useState<string | null>(null);
 
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
+
   const fetchCollaborators = useCallback(async () => {
+    await Promise.resolve();
     if (!projectId) {
-      setCollaborators([]);
-      setIsLoading(false);
-      setError(null);
+      if (isMountedRef.current) {
+        setCollaborators([]);
+        setIsLoading(false);
+        setError(null);
+      }
       return;
     }
-    setIsLoading(true);
-    setError(null);
+    if (isMountedRef.current) {
+      setIsLoading(true);
+      setError(null);
+    }
     try {
       const res = await fetch(`/api/projects/${projectId}/collaborators`);
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to load collaborators");
+      const data = await handleResponse(res, "Failed to load collaborators");
+      if (isMountedRef.current) {
+        setCollaborators(data);
       }
-      const data = await res.json();
-      setCollaborators(data);
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setError(err.message);
-      } else {
-        setError(String(err) || "An unknown error occurred");
+      if (isMountedRef.current) {
+        setError(err instanceof Error ? err.message : String(err));
       }
     } finally {
-      setIsLoading(false);
+      if (isMountedRef.current) {
+        setIsLoading(false);
+      }
     }
   }, [projectId]);
 
   useEffect(() => {
-    fetchCollaborators();
+    Promise.resolve().then(() => {
+      fetchCollaborators();
+    });
   }, [fetchCollaborators]);
 
   const inviteCollaborator = async (email: string): Promise<boolean> => {
     if (!projectId) return false;
-    setIsInviting(true);
-    setInviteError(null);
+    if (isMountedRef.current) {
+      setIsInviting(true);
+      setInviteError(null);
+    }
     try {
       const res = await fetch(`/api/projects/${projectId}/collaborators`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to invite collaborator");
-      }
+      await handleResponse(res, "Failed to invite collaborator");
       // Reload the list of collaborators to get enriched data from Clerk
       await fetchCollaborators();
       return true;
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setInviteError(err.message);
-      } else {
-        setInviteError(String(err) || "An unknown error occurred");
+      if (isMountedRef.current) {
+        setInviteError(err instanceof Error ? err.message : String(err));
       }
       return false;
     } finally {
-      setIsInviting(false);
+      if (isMountedRef.current) {
+        setIsInviting(false);
+      }
     }
   };
 
   const removeCollaborator = async (id: string): Promise<boolean> => {
     if (!projectId) return false;
-    setRemovingId(id);
-    setRemoveError(null);
+    if (isMountedRef.current) {
+      setRemovingId(id);
+      setRemoveError(null);
+    }
     try {
       const res = await fetch(`/api/projects/${projectId}/collaborators`, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Failed to remove collaborator");
+      await handleResponse(res, "Failed to remove collaborator");
+      if (isMountedRef.current) {
+        setCollaborators((prev) => prev.filter((c) => c.id !== id));
       }
-      setCollaborators((prev) => prev.filter((c) => c.id !== id));
       return true;
     } catch (err: unknown) {
-      if (err instanceof Error) {
-        setRemoveError(err.message);
-      } else {
-        setRemoveError(String(err) || "Failed to remove collaborator");
+      if (isMountedRef.current) {
+        setRemoveError(err instanceof Error ? err.message : String(err));
       }
       return false;
     } finally {
-      setRemovingId(null);
+      if (isMountedRef.current) {
+        setRemovingId(null);
+      }
     }
   };
 

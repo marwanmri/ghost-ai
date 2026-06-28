@@ -12,7 +12,6 @@ const CURSOR_COLORS = [
 ] as const;
 
 declare global {
-  // eslint-disable-next-line no-var
   var liveblocksClient: Liveblocks | undefined;
 }
 

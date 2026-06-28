@@ -34,6 +34,9 @@ export async function PATCH(
       const body = await request.json();
       if (body.name && typeof body.name === "string" && body.name.trim()) {
         name = body.name.trim();
+        if (name.length > 100) {
+          name = name.substring(0, 100);
+        }
       }
     } catch {
       return NextResponse.json(
@@ -83,7 +86,7 @@ export async function PATCH(
     return NextResponse.json(updatedProject);
   } catch (error) {
     console.error("Error updating project:", error);
-    const err = error as any;
+    const err = error as { code?: string; meta?: { target?: string | string[] } };
     if (
       err &&
       (err.code === "P2002" ||
